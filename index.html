@@ -40,6 +40,8 @@
   .search-bar-inner { max-width: 820px; margin: 0 auto; }
   #search { width:100%; padding:0.85rem 1rem; font-size:1rem; font-family:inherit; color:var(--ink); border:1.5px solid var(--rule); border-radius:6px; background:var(--paper); }
   #search:focus { outline:none; border-color:var(--navy); background:var(--panel); }
+  #partialMatchLabel { display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; color:var(--ink-soft); margin-top:0.55rem; cursor:pointer; }
+  #partialMatchLabel input { cursor:pointer; }
   #matchNav { display:none; align-items:center; gap:0.6rem; margin-top:0.6rem; font-size:0.85rem; color:var(--ink-soft); }
   #matchNav button { font-family:inherit; font-size:0.82rem; font-weight:600; color:var(--navy); background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:0.3rem 0.65rem; cursor:pointer; }
   #matchNav button:hover { background:var(--paper); }
@@ -100,6 +102,10 @@
   <div id="searchBar">
     <div class="search-bar-inner">
       <input id="search" type="text" placeholder="Search by party, category, or keyword...">
+      <label id="partialMatchLabel">
+        <input type="checkbox" id="partialMatchToggle">
+        Match partial words (e.g. "sick" finds "sickness"; also matches regardless of spacing, like "time off" / "timeoff")
+      </label>
       <div id="matchNav">
         <button id="prevMatchBtn" type="button">&uarr; Prev</button>
         <span id="matchCount"></span>
@@ -127,6 +133,7 @@ let activeCategory = null;
 let activeYear = null;
 let searchQuery = "";
 let searchTimer = null;
+let partialMatch = false;
 let searchMatches = [];
 let currentMatchIndex = -1;
 const LE_KEYWORDS = ["law enforcement","police","detective","detectives","corrections","investigator","investigators","sheriff","trooper","troopers","patrolman","patrolmen","constable","officer","officers","prosecutor","prosecutors","pba","fop","soa"];
@@ -254,10 +261,27 @@ document.getElementById("search").onkeydown = async (e) => {
 };
 document.getElementById("prevMatchBtn").onclick = prevMatch;
 document.getElementById("nextMatchBtn").onclick = nextMatch;
+document.getElementById("partialMatchToggle").onchange = (e) => {
+  partialMatch = e.target.checked;
+  if (searchQuery) runSearch();
+};
 async function runSearch() {
   const cols = "id,filename,storage_path,parties,summary,factors,decision,category,decision_date,citation,created_at";
   let url = SUPABASE_URL + "/rest/v1/documents?select=" + cols;
-  if (searchQuery) url += "&search_vector=wfts(english)." + encodeURIComponent(searchQuery);
+  if (searchQuery) {
+    if (partialMatch) {
+      // Partial/substring matching: ignores word boundaries entirely, so
+      // "sick" finds "sickness" and "time off" finds "timeoff". Each word
+      // becomes its own ilike filter on the same column; PostgREST
+      // combines repeated filters on the same column with AND.
+      const terms = searchQuery.trim().split(/\s+/).filter(Boolean);
+      terms.forEach(t => { url += "&search_text=ilike.*" + encodeURIComponent(t) + "*"; });
+    } else {
+      // Default: stemmed whole-word search (handles things like
+      // "negotiating" matching "negotiate" automatically).
+      url += "&search_vector=wfts(english)." + encodeURIComponent(searchQuery);
+    }
+  }
   if (activeCategory) url += "&category=eq." + encodeURIComponent(activeCategory);
   if (activeYear) url += "&decision_date=gte." + activeYear + "-01-01&decision_date=lte." + activeYear + "-12-31";
   url += "&order=decision_date.desc.nullslast";
