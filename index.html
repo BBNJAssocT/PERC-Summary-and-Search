@@ -16,6 +16,7 @@
   body { font-family:'IBM Plex Sans',-apple-system,Segoe UI,Arial,sans-serif; margin:0; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
   .mono { font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace; }
   #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
+  #setPasswordScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
   .login-card { background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:2rem; max-width:380px; width:100%; }
   .login-card h1 { font-family:'Spectral',Georgia,serif; font-weight:600; color:var(--navy); margin:0 0 0.3rem; font-size:1.6rem; }
   .login-card p { color:var(--ink-soft); font-size:0.88rem; margin:0 0 1.4rem; }
@@ -85,6 +86,16 @@
     <div id="loginError"></div>
   </div>
 </div>
+<div id="setPasswordScreen" style="display:none;">
+  <div class="login-card">
+    <h1>Welcome</h1>
+    <p>Choose a password to finish setting up your account.</p>
+    <input id="newPassword" type="password" placeholder="New password" autocomplete="new-password">
+    <input id="newPasswordConfirm" type="password" placeholder="Confirm password" autocomplete="new-password">
+    <button id="setPasswordBtn">Set Password &amp; Sign In</button>
+    <div id="setPasswordError"></div>
+  </div>
+</div>
 <div id="app">
   <header class="hero">
     <div class="hero-inner">
@@ -152,6 +163,56 @@ function escapeHtml(str) {
 function encodeStoragePath(path) {
   return path.split('/').map(encodeURIComponent).join('/');
 }
+// Invite and password-reset emails redirect back here with a one-time
+// access token in the URL hash (e.g. #access_token=...&type=invite),
+// not a normal email/password login. Detect that and show a "set your
+// password" screen instead of the regular login form.
+function checkInviteOrRecoveryLink() {
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+  const params = new URLSearchParams(hash);
+  const token = params.get('access_token');
+  const type = params.get('type');
+  if (token && (type === 'invite' || type === 'recovery')) {
+    accessToken = token;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('setPasswordScreen').style.display = 'flex';
+    // Clear the token out of the visible URL so refreshing doesn't re-trigger this.
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    return true;
+  }
+  return false;
+}
+document.getElementById("setPasswordBtn").onclick = async () => {
+  const pw1 = document.getElementById("newPassword").value;
+  const pw2 = document.getElementById("newPasswordConfirm").value;
+  const errEl = document.getElementById("setPasswordError");
+  errEl.style.display = "none";
+  if (pw1.length < 6) {
+    errEl.textContent = "Password must be at least 6 characters.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (pw1 !== pw2) {
+    errEl.textContent = "Passwords do not match.";
+    errEl.style.display = "block";
+    return;
+  }
+  const resp = await fetch(SUPABASE_URL + "/auth/v1/user", {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ password: pw1 }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    errEl.textContent = data.msg || data.error_description || "Could not set password. The link may have expired -- ask for a new invite.";
+    errEl.style.display = "block";
+    return;
+  }
+  document.getElementById("setPasswordScreen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  await loadChipData();
+  await runSearch();
+};
 document.getElementById("loginBtn").onclick = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -448,6 +509,7 @@ async function openPdf(storagePath) {
   else alert("Could not open that PDF right now.");
 }
 document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Summaries.pdf");
+checkInviteOrRecoveryLink();
 </script>
 </body>
 </html>
