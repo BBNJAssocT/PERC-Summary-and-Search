@@ -1,1 +1,429 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Member Login TEST</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:#F6F4EE; --panel:#FFFFFF; --ink:#22282F; --ink-soft:#5B6470;
+    --rule:#DCD6C6; --navy:#23405F; --navy-soft:#3F5D80; --brass:#A6772E;
+    --brass-soft:#F3E7D2; --slate:#6B7280; --slate-soft:#E8E9EB;
+  }
+  * { box-sizing: border-box; }
+  body { font-family:'IBM Plex Sans',-apple-system,Segoe UI,Arial,sans-serif; margin:0; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .mono { font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace; }
+  #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
+  .login-card { background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:2rem; max-width:380px; width:100%; }
+  .login-card h1 { font-family:'Spectral',Georgia,serif; font-weight:600; color:var(--navy); margin:0 0 0.3rem; font-size:1.6rem; }
+  .login-card p { color:var(--ink-soft); font-size:0.88rem; margin:0 0 1.4rem; }
+  .login-card input { width:100%; padding:0.7rem 0.85rem; margin-bottom:0.7rem; border:1.5px solid var(--rule); border-radius:5px; font-family:inherit; font-size:0.95rem; background:var(--paper); }
+  .login-card input:focus { outline:none; border-color:var(--navy); background:var(--panel); }
+  .login-card button { width:100%; padding:0.75rem; background:var(--navy); color:#fff; border:none; border-radius:5px; font-family:inherit; font-size:0.95rem; font-weight:600; cursor:pointer; }
+  .login-card button:disabled { opacity:0.6; cursor:default; }
+  #loginError { color:#a33; font-size:0.85rem; margin-top:0.8rem; display:none; }
+  #app { display:none; }
+  header.hero { background:var(--panel); border-bottom:1px solid var(--rule); padding:2rem 1.25rem 1.25rem; }
+  .hero-inner { max-width:820px; margin:0 auto; }
+  .hero-top { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; }
+  .hero h1 { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.9rem; margin:0 0 0.35rem; color:var(--navy); }
+  .hero-top-right { display:flex; align-items:center; gap:0.9rem; }
+  #welcomeMsg { font-size:0.88rem; color:var(--ink-soft); }
+  #welcomeMsg strong { color:var(--ink); font-weight:600; }
+  #welcomeMsg .edit-name { cursor:pointer; text-decoration:underline; text-underline-offset:2px; color:var(--navy); font-size:0.78rem; margin-left:0.4rem; }
+  #signOutBtn { background:none; border:1px solid var(--rule); color:var(--ink-soft); font-family:inherit; font-size:0.82rem; padding:0.35rem 0.8rem; border-radius:5px; cursor:pointer; }
+  #downloadSummaryBtn { display:inline-block; margin-top:0.6rem; background:var(--brass); color:#fff; text-decoration:none; font-size:0.85rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:5px; border:none; cursor:pointer; font-family:inherit; }
+  .hero p.tagline { margin:0.8rem 0 1.1rem; color:var(--ink-soft); font-size:0.95rem; max-width:64ch; line-height:1.5; }
+  #searchBar { position: sticky; top: 0; z-index: 50; background: var(--panel); border-bottom: 1px solid var(--rule); padding: 0.85rem 1.25rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+  .search-bar-inner { max-width: 820px; margin: 0 auto; }
+  #search { width:100%; padding:0.85rem 1rem; font-size:1rem; font-family:inherit; color:var(--ink); border:1.5px solid var(--rule); border-radius:6px; background:var(--paper); }
+  #search:focus { outline:none; border-color:var(--navy); background:var(--panel); }
+  #matchNav { display:none; align-items:center; gap:0.6rem; margin-top:0.6rem; font-size:0.85rem; color:var(--ink-soft); }
+  #matchNav button { font-family:inherit; font-size:0.82rem; font-weight:600; color:var(--navy); background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:0.3rem 0.65rem; cursor:pointer; }
+  #matchNav button:hover { background:var(--paper); }
+  #matchCount { font-family:'IBM Plex Mono',monospace; font-size:0.8rem; }
+  mark.search-hit { background:#F6E9C9; color:inherit; padding:0 2px; border-radius:2px; }
+  mark.search-hit.active { background:var(--brass); color:#fff; }
+  .chip-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.9rem; }
+  .chip { font-family:inherit; font-size:0.82rem; font-weight:500; color:var(--navy); background:var(--panel); border:1px solid var(--rule); border-bottom:2.5px solid var(--rule); border-radius:4px 4px 0 0; padding:0.35rem 0.7rem; cursor:pointer; }
+  .chip .n { color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; font-size:0.75rem; margin-left:0.35rem; }
+  .chip.active { border-bottom-color:var(--navy); background:var(--navy); color:#fff; }
+  .chip.active .n { color:#CFE0F0; }
+  main { max-width:820px; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
+  .status-bar { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:1rem; color:var(--ink-soft); font-size:0.85rem; }
+  .clear-filter { color:var(--navy); cursor:pointer; font-weight:500; text-decoration:underline; }
+  .section-label { font-family:'Spectral',Georgia,serif; font-style:italic; font-weight:500; font-size:1.05rem; color:var(--navy); margin:1.8rem 0 0.7rem; padding-bottom:0.35rem; border-bottom:1px solid var(--rule); }
+  .section-label.recent { color:var(--brass); }
+  .section-label:first-child { margin-top:0; }
+  .card { background:var(--panel); border:1px solid var(--rule); border-left:4px solid var(--slate); border-radius:3px; padding:0.95rem 1.1rem; margin-bottom:0.7rem; }
+  .card.is-le { border-left-color:var(--brass); }
+  .le-badge { display:inline-block; font-style:italic; font-weight:600; font-size:0.72rem; padding:0.1rem 0.55rem; border-radius:3px; margin-bottom:0.5rem; }
+  .le-badge.yes { background:var(--brass-soft); color:#7A5A17; }
+  .le-badge.no { background:var(--slate-soft); color:var(--ink-soft); }
+  .parties { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.12rem; margin-bottom:0.25rem; }
+  .decision-date { font-size:0.78rem; color:var(--ink-soft); margin-bottom:0.6rem; }
+  .label { font-weight:600; }
+  .factors { margin:0.3rem 0 0.5rem 1.1rem; padding:0; }
+  .factors li { margin-bottom:2px; font-size:0.95rem; }
+  a.pdf-link, button.pdf-link { display:inline-block; margin-top:0.6rem; color:var(--navy); text-decoration:none; font-weight:600; font-size:0.9rem; border-bottom:1px solid var(--navy-soft); background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; cursor:pointer; padding:0; }
+  .empty-state, .loading-state { color:var(--ink-soft); font-style:italic; padding:2rem 0; text-align:center; }
+  .disclosure { font-style:italic; font-size:0.75rem; color:var(--ink-soft); line-height:1.45; margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--rule); max-width:64ch; }
+</style>
+</head>
+<body>
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>Member Login TEST</h1>
+    <p>Sign in to search the case archive. Access is by invitation only.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+<div id="app">
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-top">
+        <h1>Member Login TEST</h1>
+        <div class="hero-top-right">
+          <span id="welcomeMsg"></span>
+          <button id="signOutBtn">Sign Out</button>
+        </div>
+      </div>
+      <p class="tagline">Search by <strong>party name</strong>, <strong>subject category</strong>, or <strong>any keyword</strong> in the full text of every decision. Press Enter to jump to the next match.</p>
+      <button id="downloadSummaryBtn">Download Full Summary (PDF)</button>
+    </div>
+  </header>
+  <div id="searchBar">
+    <div class="search-bar-inner">
+      <input id="search" type="text" placeholder="Search by party, category, or keyword...">
+      <div id="matchNav">
+        <button id="prevMatchBtn" type="button">&uarr; Prev</button>
+        <span id="matchCount"></span>
+        <button id="nextMatchBtn" type="button">Next &darr;</button>
+      </div>
+    </div>
+  </div>
+  <div class="hero-inner" style="padding:0 1.25rem;">
+    <div class="chip-row" id="categoryChips"></div>
+    <div class="chip-row" id="yearChips"></div>
+    <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
+  </div>
+  <main>
+    <div class="status-bar" id="statusBar"></div>
+    <div id="results"><div class="loading-state">Loading...</div></div>
+  </main>
+</div>
+<script>
+const SUPABASE_URL = "https://dhsjjsauzixhwxsctjnn.supabase.co";
+const ANON_KEY = "sb_publishable_6vcYKIkOjegQsq9DqWisAg_VyFV8wY4";
+let accessToken = null;
+let currentDisplayName = "";
+let allLightweightRows = [];
+let activeCategory = null;
+let activeYear = null;
+let searchQuery = "";
+let searchTimer = null;
+let searchMatches = [];
+let currentMatchIndex = -1;
+const LE_KEYWORDS = ["law enforcement","police","detective","detectives","corrections","investigator","investigators","sheriff","trooper","troopers","patrolman","patrolmen","constable","officer","officers","prosecutor","prosecutors","pba","fop","soa"];
+const LE_PATTERN = new RegExp("\\b(" + LE_KEYWORDS.join("|") + ")\\b", "i");
+function isLawEnforcement(row) {
+  const hay = [row.parties, row.category, row.summary, row.decision, ...(row.factors||[])].join(" ");
+  return LE_PATTERN.test(hay);
+}
+function escapeHtml(str) {
+  return String(str==null?"":str).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+// Encodes a storage path segment-by-segment, preserving real '/' folder
+// separators as literal characters (matching Supabase's own official SDKs).
+// A naive encodeURIComponent(fullPath) incorrectly turns '/' into '%2F',
+// causing 'Invalid signature' errors for any file inside a subfolder.
+function encodeStoragePath(path) {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const errEl = document.getElementById("loginError");
+  errEl.style.display = "none";
+  const resp = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
+    method: "POST",
+    headers: { "apikey": ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    errEl.textContent = data.error_description || data.msg || "Sign-in failed. Check your email and password.";
+    errEl.style.display = "block";
+    return;
+  }
+  accessToken = data.access_token;
+  const meta = (data.user && data.user.user_metadata) || {};
+  currentDisplayName = meta.display_name || "";
+  renderWelcome();
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  await loadChipData();
+  await runSearch();
+};
+function renderWelcome() {
+  const el = document.getElementById("welcomeMsg");
+  if (currentDisplayName) {
+    el.innerHTML = 'Welcome, <strong>' + escapeHtml(currentDisplayName) + '</strong><span class="edit-name" id="editNameBtn">(edit)</span>';
+  } else {
+    el.innerHTML = '<span class="edit-name" id="editNameBtn">Set your display name</span>';
+  }
+  document.getElementById("editNameBtn").onclick = editDisplayName;
+}
+async function editDisplayName() {
+  const newName = window.prompt("What name should we display for you?", currentDisplayName || "");
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed) return;
+  const resp = await fetch(SUPABASE_URL + "/auth/v1/user", {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ data: { display_name: trimmed } }),
+  });
+  if (resp.ok) {
+    currentDisplayName = trimmed;
+    renderWelcome();
+  } else {
+    alert("Could not save your name right now. Please try again.");
+  }
+}
+document.getElementById("signOutBtn").onclick = () => {
+  accessToken = null;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("loginScreen").style.display = "flex";
+  document.getElementById("password").value = "";
+};
+function authHeaders() {
+  return { "apikey": ANON_KEY, "Authorization": "Bearer " + accessToken };
+}
+async function loadChipData() {
+  const resp = await fetch(SUPABASE_URL + "/rest/v1/documents?select=category,decision_date", { headers: authHeaders() });
+  allLightweightRows = await resp.json();
+  buildChips();
+}
+function buildChips() {
+  const catCounts = {}, yearCounts = {};
+  allLightweightRows.forEach(r => {
+    catCounts[r.category] = (catCounts[r.category]||0) + 1;
+    if (r.decision_date) { const y = r.decision_date.slice(0,4); yearCounts[y] = (yearCounts[y]||0)+1; }
+  });
+  const catContainer = document.getElementById("categoryChips");
+  catContainer.innerHTML = "";
+  Object.keys(catCounts).sort().forEach(cat => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (activeCategory===cat ? " active" : "");
+    chip.innerHTML = escapeHtml(cat) + '<span class="n">'+catCounts[cat]+'</span>';
+    chip.onclick = () => { activeCategory = (activeCategory===cat) ? null : cat; buildChips(); runSearch(); };
+    catContainer.appendChild(chip);
+  });
+  const yearContainer = document.getElementById("yearChips");
+  yearContainer.innerHTML = "";
+  Object.keys(yearCounts).sort().reverse().forEach(year => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (activeYear===year ? " active" : "");
+    chip.innerHTML = escapeHtml(year) + '<span class="n">'+yearCounts[year]+'</span>';
+    chip.onclick = () => { activeYear = (activeYear===year) ? null : year; buildChips(); runSearch(); };
+    yearContainer.appendChild(chip);
+  });
+}
+document.getElementById("search").oninput = (e) => {
+  searchQuery = e.target.value.trim();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { searchTimer = null; runSearch(); }, 300);
+};
+document.getElementById("search").onkeydown = async (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+    await runSearch();
+  }
+  if (searchMatches.length) {
+    if (e.shiftKey) prevMatch(); else nextMatch();
+  }
+};
+document.getElementById("prevMatchBtn").onclick = prevMatch;
+document.getElementById("nextMatchBtn").onclick = nextMatch;
+async function runSearch() {
+  const cols = "id,filename,storage_path,parties,summary,factors,decision,category,decision_date,citation,created_at";
+  let url = SUPABASE_URL + "/rest/v1/documents?select=" + cols;
+  if (searchQuery) url += "&search_vector=wfts(english)." + encodeURIComponent(searchQuery);
+  if (activeCategory) url += "&category=eq." + encodeURIComponent(activeCategory);
+  if (activeYear) url += "&decision_date=gte." + activeYear + "-01-01&decision_date=lte." + activeYear + "-12-31";
+  url += "&order=decision_date.desc.nullslast";
+  document.getElementById("results").innerHTML = '<div class="loading-state">Searching...</div>';
+  const resp = await fetch(url, { headers: authHeaders() });
+  const rows = await resp.json();
+  render(rows, Boolean(searchQuery) || Boolean(activeCategory) || Boolean(activeYear));
+  if (searchQuery) {
+    highlightSearchTerms(searchQuery);
+  } else {
+    clearHighlights();
+  }
+}
+function highlightSearchTerms(query) {
+  clearHighlights();
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  if (!terms.length) return;
+  const pattern = new RegExp('(' + terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
+  const cards = document.querySelectorAll('#results .card');
+  cards.forEach(card => {
+    const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => node.parentElement.closest('button') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+    });
+    const textNodes = [];
+    let n;
+    while ((n = walker.nextNode())) textNodes.push(n);
+    textNodes.forEach(node => {
+      const text = node.nodeValue;
+      pattern.lastIndex = 0;
+      if (!pattern.test(text)) return;
+      pattern.lastIndex = 0;
+      const frag = document.createDocumentFragment();
+      let lastIndex = 0, m;
+      while ((m = pattern.exec(text))) {
+        if (m.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-hit';
+        mark.textContent = m[0];
+        frag.appendChild(mark);
+        lastIndex = m.index + m[0].length;
+        if (m[0].length === 0) pattern.lastIndex++;
+      }
+      if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+      node.parentNode.replaceChild(frag, node);
+    });
+  });
+  searchMatches = Array.from(document.querySelectorAll('#results mark.search-hit'));
+  currentMatchIndex = searchMatches.length ? 0 : -1;
+  updateMatchNav();
+  if (currentMatchIndex >= 0) goToMatch(currentMatchIndex);
+}
+function clearHighlights() {
+  document.querySelectorAll('#results mark.search-hit').forEach(mark => {
+    const parent = mark.parentNode;
+    if (!parent) return;
+    parent.replaceChild(document.createTextNode(mark.textContent), mark);
+    parent.normalize();
+  });
+  searchMatches = [];
+  currentMatchIndex = -1;
+  updateMatchNav();
+}
+function goToMatch(idx) {
+  if (!searchMatches.length) return;
+  searchMatches.forEach(m => m.classList.remove('active'));
+  currentMatchIndex = ((idx % searchMatches.length) + searchMatches.length) % searchMatches.length;
+  const m = searchMatches[currentMatchIndex];
+  m.classList.add('active');
+  scrollToElementCentered(m);
+  updateMatchNav();
+}
+function scrollToElementCentered(el) {
+  const rect = el.getBoundingClientRect();
+  const stickyBarHeight = document.getElementById('searchBar').offsetHeight;
+  const targetY = window.pageYOffset + rect.top - stickyBarHeight - 24;
+  try {
+    window.scrollTo({ top: Math.max(0, targetY), left: 0, behavior: 'smooth' });
+  } catch (e) {
+    window.scrollTo(0, Math.max(0, targetY));
+  }
+}
+function updateMatchNav() {
+  const nav = document.getElementById('matchNav');
+  if (searchMatches.length === 0) {
+    nav.style.display = 'none';
+  } else {
+    nav.style.display = 'flex';
+    document.getElementById('matchCount').textContent = (currentMatchIndex + 1) + ' of ' + searchMatches.length;
+  }
+}
+function nextMatch() { goToMatch(currentMatchIndex + 1); }
+function prevMatch() { goToMatch(currentMatchIndex - 1); }
+function renderCard(row) {
+  const isLE = isLawEnforcement(row);
+  const factorsHtml = (row.factors && row.factors.length)
+    ? '<div><span class="label">Factors:</span><ul class="factors">' + row.factors.map(f => '<li>'+escapeHtml(f)+'</li>').join("") + '</ul></div>' : "";
+  const div = document.createElement("div");
+  div.className = "card" + (isLE ? " is-le" : "");
+  const leLabel = isLE ? "Law Enforcement Decision" : "Other - Non-Law Enforcement";
+  div.innerHTML = `
+    <div class="le-badge ${isLE?'yes':'no'}">${leLabel}</div>
+    <div class="parties">${escapeHtml(row.parties)}</div>
+    ${row.decision_date ? '<div class="decision-date mono">Issued '+escapeHtml(row.decision_date)+'</div>' : ""}
+    <div><span class="label">Summary:</span> ${escapeHtml(row.summary)}</div>
+    ${factorsHtml}
+    <div><span class="label">Decision / Determination:</span> ${escapeHtml(row.decision)}</div>
+    <button class="pdf-link" data-path="${escapeHtml(row.storage_path)}">Open PDF: ${escapeHtml(row.filename)}</button>
+  `;
+  div.querySelector(".pdf-link").onclick = () => openPdf(row.storage_path);
+  return div;
+}
+function render(rows, isFiltered) {
+  const container = document.getElementById("results");
+  container.innerHTML = "";
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-state">No decisions match that search.</div>';
+  } else if (!isFiltered) {
+    const recent = rows.slice(0, 3);
+    const recentIds = new Set(recent.map(r => r.id));
+    const remaining = rows.filter(r => !recentIds.has(r.id));
+    if (recent.length) {
+      const label = document.createElement("div");
+      label.className = "section-label recent"; label.textContent = "Recent Decisions";
+      container.appendChild(label);
+      recent.forEach(r => container.appendChild(renderCard(r)));
+    }
+    const grouped = {};
+    remaining.forEach(r => { (grouped[r.category]=grouped[r.category]||[]).push(r); });
+    Object.keys(grouped).sort().forEach(cat => {
+      const label = document.createElement("div");
+      label.className = "section-label"; label.textContent = cat;
+      container.appendChild(label);
+      grouped[cat].sort((a,b) => (isLawEnforcement(b)-isLawEnforcement(a)) || (a.parties||"").localeCompare(b.parties||""))
+        .forEach(r => container.appendChild(renderCard(r)));
+    });
+  } else {
+    const grouped = {};
+    rows.forEach(r => { (grouped[r.category]=grouped[r.category]||[]).push(r); });
+    Object.keys(grouped).sort().forEach(cat => {
+      const label = document.createElement("div");
+      label.className = "section-label"; label.textContent = cat;
+      container.appendChild(label);
+      grouped[cat].forEach(r => container.appendChild(renderCard(r)));
+    });
+  }
+  const parts = [];
+  if (searchQuery) parts.push('Search: "'+escapeHtml(searchQuery)+'"');
+  if (activeCategory) parts.push("Category: "+escapeHtml(activeCategory));
+  if (activeYear) parts.push("Year: "+activeYear);
+  const label = parts.length ? parts.join(" | ") : allLightweightRows.length + " decisions indexed";
+  const clearLink = (searchQuery||activeCategory||activeYear) ? '<span class="clear-filter" id="clearBtn">Clear</span>' : "";
+  document.getElementById("statusBar").innerHTML = '<span>'+label+' - '+rows.length+' shown</span>'+clearLink;
+  const clearBtn = document.getElementById("clearBtn");
+  if (clearBtn) clearBtn.onclick = () => { searchQuery=""; activeCategory=null; activeYear=null; document.getElementById("search").value=""; buildChips(); runSearch(); };
+}
+async function openPdf(storagePath) {
+  const resp = await fetch(SUPABASE_URL + "/storage/v1/object/sign/case-pdfs/" + encodeStoragePath(storagePath), {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: 3600 }),
+  });
+  const data = await resp.json();
+  if (data.signedURL) window.open(SUPABASE_URL + "/storage/v1" + data.signedURL, "_blank");
+  else alert("Could not open that PDF right now.");
+}
+document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Summaries.pdf");
+</script>
+</body>
+</html>
