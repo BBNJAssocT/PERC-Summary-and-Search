@@ -146,6 +146,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-09-23-highlight-fix-v4</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -387,7 +388,12 @@ async function runSearch() {
 }
 function highlightSearchTerms(query) {
   clearHighlights();
-  const terms = query.split(/[\s,]+/).map(t => t.trim()).filter(Boolean);
+  // Highlighting must mirror the search mode: in phrase mode, only the
+  // exact phrase should light up (never a loose substring like "time"
+  // inside "timely"); in partial mode, each word highlights separately.
+  const terms = partialMatch
+    ? query.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
+    : [query.trim()].filter(Boolean);
   if (!terms.length) return;
   const pattern = new RegExp('(' + terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
   const cards = document.querySelectorAll('#results .card');
