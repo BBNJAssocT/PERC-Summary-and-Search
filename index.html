@@ -366,9 +366,9 @@ async function runSearch() {
       // phrase together, not "sick" and "leave" separately. Comma-
       // separated entries become separate phrases OR'd together, e.g.
       // "sick leave, overtime" finds either exact phrase.
-      const phrases = searchQuery.split(',').map(p => p.trim().replace(/"/g, '')).filter(Boolean);
-      const tsQuery = phrases.map(p => '"' + p + '"').join(' or ');
-      url += "&search_vector=wfts(english)." + encodeURIComponent(tsQuery);
+      // Default: the whole box is treated as one exact phrase.
+      const phrase = searchQuery.trim().replace(/"/g, '');
+      url += "&search_vector=wfts(english)." + encodeURIComponent('"' + phrase + '"');
     }
   }
   if (activeCategory) url += "&category=eq." + encodeURIComponent(activeCategory);
