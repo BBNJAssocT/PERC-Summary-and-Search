@@ -41,8 +41,8 @@
   .search-bar-inner { max-width: 820px; margin: 0 auto; }
   #search { width:100%; padding:0.85rem 1rem; font-size:1rem; font-family:inherit; color:var(--ink); border:1.5px solid var(--rule); border-radius:6px; background:var(--paper); }
   #search:focus { outline:none; border-color:var(--navy); background:var(--panel); }
-  #partialMatchLabel { display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; color:var(--ink-soft); margin-top:0.55rem; cursor:pointer; }
-  #partialMatchLabel input { cursor:pointer; }
+  #partialMatchLabel, #leOnlyLabel { display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; color:var(--ink-soft); margin-top:0.55rem; cursor:pointer; }
+  #partialMatchLabel input, #leOnlyLabel input { cursor:pointer; }
   #matchNav { display:none; align-items:center; gap:0.6rem; margin-top:0.6rem; font-size:0.85rem; color:var(--ink-soft); }
   #matchNav button { font-family:inherit; font-size:0.82rem; font-weight:600; color:var(--navy); background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:0.3rem 0.65rem; cursor:pointer; }
   #matchNav button:hover { background:var(--paper); }
@@ -117,6 +117,10 @@
         <input type="checkbox" id="partialMatchToggle">
         Match partial words (e.g. "sick" finds "sickness"; also matches regardless of spacing, like "time off" / "timeoff")
       </label>
+      <label id="leOnlyLabel">
+        <input type="checkbox" id="leOnlyToggle">
+        Show only law enforcement decisions
+      </label>
       <div id="matchNav">
         <button id="prevMatchBtn" type="button">&uarr; Prev</button>
         <span id="matchCount"></span>
@@ -145,6 +149,7 @@ let activeYear = null;
 let searchQuery = "";
 let searchTimer = null;
 let partialMatch = false;
+let leOnly = false;
 let searchMatches = [];
 let currentMatchIndex = -1;
 const LE_KEYWORDS = ["law enforcement","police","detective","detectives","corrections","investigator","investigators","sheriff","trooper","troopers","patrolman","patrolmen","constable","officer","officers","prosecutor","prosecutors","pba","fop","soa"];
@@ -326,6 +331,10 @@ document.getElementById("partialMatchToggle").onchange = (e) => {
   partialMatch = e.target.checked;
   if (searchQuery) runSearch();
 };
+document.getElementById("leOnlyToggle").onchange = (e) => {
+  leOnly = e.target.checked;
+  runSearch();
+};
 async function runSearch() {
   const cols = "id,filename,storage_path,parties,summary,factors,decision,category,decision_date,citation,created_at";
   let url = SUPABASE_URL + "/rest/v1/documents?select=" + cols;
@@ -348,8 +357,9 @@ async function runSearch() {
   url += "&order=decision_date.desc.nullslast";
   document.getElementById("results").innerHTML = '<div class="loading-state">Searching...</div>';
   const resp = await fetch(url, { headers: authHeaders() });
-  const rows = await resp.json();
-  render(rows, Boolean(searchQuery) || Boolean(activeCategory) || Boolean(activeYear));
+  let rows = await resp.json();
+  if (leOnly) rows = rows.filter(isLawEnforcement);
+  render(rows, Boolean(searchQuery) || Boolean(activeCategory) || Boolean(activeYear) || leOnly);
   if (searchQuery) {
     highlightSearchTerms(searchQuery);
   } else {
@@ -492,11 +502,17 @@ function render(rows, isFiltered) {
   if (searchQuery) parts.push('Search: "'+escapeHtml(searchQuery)+'"');
   if (activeCategory) parts.push("Category: "+escapeHtml(activeCategory));
   if (activeYear) parts.push("Year: "+activeYear);
+  if (leOnly) parts.push("Law Enforcement Only");
   const label = parts.length ? parts.join(" | ") : allLightweightRows.length + " decisions indexed";
-  const clearLink = (searchQuery||activeCategory||activeYear) ? '<span class="clear-filter" id="clearBtn">Clear</span>' : "";
+  const clearLink = (searchQuery||activeCategory||activeYear||leOnly) ? '<span class="clear-filter" id="clearBtn">Clear</span>' : "";
   document.getElementById("statusBar").innerHTML = '<span>'+label+' - '+rows.length+' shown</span>'+clearLink;
   const clearBtn = document.getElementById("clearBtn");
-  if (clearBtn) clearBtn.onclick = () => { searchQuery=""; activeCategory=null; activeYear=null; document.getElementById("search").value=""; buildChips(); runSearch(); };
+  if (clearBtn) clearBtn.onclick = () => {
+    searchQuery=""; activeCategory=null; activeYear=null; leOnly=false;
+    document.getElementById("search").value="";
+    document.getElementById("leOnlyToggle").checked = false;
+    buildChips(); runSearch();
+  };
 }
 async function openPdf(storagePath) {
   const resp = await fetch(SUPABASE_URL + "/storage/v1/object/sign/case-pdfs/" + encodeStoragePath(storagePath), {
