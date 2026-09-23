@@ -150,7 +150,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-09-23-related-decisions-v5</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-09-23-related-links-batch-v6</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -171,6 +171,7 @@ let partialMatch = false;
 let leOnly = false;
 let searchMatches = [];
 let currentMatchIndex = -1;
+let relatedCitationLookup = {};
 const LE_KEYWORDS = ["law enforcement","police","detective","detectives","corrections","investigator","investigators","sheriff","trooper","troopers","patrolman","patrolmen","constable","officer","officers","prosecutor","prosecutors","pba","fop","soa"];
 const LE_PATTERN = new RegExp("\\b(" + LE_KEYWORDS.join("|") + ")\\b", "i");
 function isLawEnforcement(row) {
@@ -367,10 +368,6 @@ async function runSearch() {
       const terms = searchQuery.split(/[\s,]+/).map(t => t.trim()).filter(Boolean);
       terms.forEach(t => { url += "&search_text=ilike.*" + encodeURIComponent(t) + "*"; });
     } else {
-      // Default: exact-phrase search. "sick leave" only matches that
-      // phrase together, not "sick" and "leave" separately. Comma-
-      // separated entries become separate phrases OR'd together, e.g.
-      // "sick leave, overtime" finds either exact phrase.
       // Default: the whole box is treated as one exact phrase.
       const phrase = searchQuery.trim().replace(/"/g, '');
       url += "&search_vector=wfts(english)." + encodeURIComponent('"' + phrase + '"');
@@ -383,12 +380,26 @@ async function runSearch() {
   const resp = await fetch(url, { headers: authHeaders() });
   let rows = await resp.json();
   if (leOnly) rows = rows.filter(isLawEnforcement);
+  await resolveRelatedCitations(rows);
   render(rows, Boolean(searchQuery) || Boolean(activeCategory) || Boolean(activeYear) || leOnly);
   if (searchQuery) {
     highlightSearchTerms(searchQuery);
   } else {
     clearHighlights();
   }
+}
+// Resolves every related-decision citation across the current result set
+// to an actual document in ONE batched query, run BEFORE rendering, so a
+// citation only ever appears as a clickable link when we already know it
+// resolves -- never a link that turns out to be dead after clicking.
+async function resolveRelatedCitations(rows) {
+  relatedCitationLookup = {};
+  const unique = [...new Set(rows.flatMap(r => r.related_citations || []))];
+  if (!unique.length) return;
+  const inClause = "in.(" + unique.join(",") + ")";
+  const resp = await fetch(SUPABASE_URL + "/rest/v1/documents?select=citation,storage_path&citation=" + encodeURIComponent(inClause), { headers: authHeaders() });
+  const found = await resp.json();
+  found.forEach(r => { relatedCitationLookup[r.citation] = r.storage_path; });
 }
 function highlightSearchTerms(query) {
   clearHighlights();
@@ -481,7 +492,10 @@ function renderCard(row) {
   const related = row.related_citations || [];
   const relatedHtml = related.length
     ? '<div class="related-decisions"><span class="label">Related / Referenced Decisions:</span> ' +
-      related.map(c => '<button type="button" class="related-link" data-citation="' + escapeHtml(c) + '">' + escapeHtml(c) + '</button>').join(', ') +
+      related.map(c => relatedCitationLookup[c]
+        ? '<button type="button" class="related-link" data-path="' + escapeHtml(relatedCitationLookup[c]) + '">' + escapeHtml(c) + '</button>'
+        : '<span class="related-plain">' + escapeHtml(c) + '</span>'
+      ).join(', ') +
       '</div>'
     : "";
   const div = document.createElement("div");
@@ -499,21 +513,9 @@ function renderCard(row) {
   `;
   div.querySelector(".pdf-link").onclick = () => openPdf(row.storage_path);
   div.querySelectorAll(".related-link").forEach(btn => {
-    btn.onclick = () => openRelatedCitation(btn.getAttribute("data-citation"), btn);
+    btn.onclick = () => openPdf(btn.getAttribute("data-path"));
   });
   return div;
-}
-async function openRelatedCitation(citation, btnEl) {
-  const resp = await fetch(SUPABASE_URL + "/rest/v1/documents?select=storage_path&citation=eq." + encodeURIComponent(citation), { headers: authHeaders() });
-  const matches = await resp.json();
-  if (matches.length && matches[0].storage_path) {
-    openPdf(matches[0].storage_path);
-  } else if (btnEl) {
-    const plain = document.createElement("span");
-    plain.className = "related-plain";
-    plain.textContent = citation;
-    btnEl.replaceWith(plain);
-  }
 }
 function render(rows, isFiltered) {
   const container = document.getElementById("results");
