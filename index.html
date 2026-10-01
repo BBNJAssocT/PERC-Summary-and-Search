@@ -150,7 +150,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-09-23-related-links-batch-v6</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-09-26-batch-citation-chunking-v8</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -396,10 +396,30 @@ async function resolveRelatedCitations(rows) {
   relatedCitationLookup = {};
   const unique = [...new Set(rows.flatMap(r => r.related_citations || []))];
   if (!unique.length) return;
-  const inClause = "in.(" + unique.join(",") + ")";
-  const resp = await fetch(SUPABASE_URL + "/rest/v1/documents?select=citation,storage_path&citation=" + encodeURIComponent(inClause), { headers: authHeaders() });
-  const found = await resp.json();
-  found.forEach(r => { relatedCitationLookup[r.citation] = r.storage_path; });
+  // The unfiltered "browse everything" view can involve 1000+ unique
+  // citations across the whole archive -- checking them all in one URL
+  // would make it far too long for the server to accept at all. Splitting
+  // into fixed-size batches keeps every single request safely short,
+  // regardless of how large the archive grows.
+  const BATCH_SIZE = 50;
+  const batches = [];
+  for (let i = 0; i < unique.length; i += BATCH_SIZE) {
+    batches.push(unique.slice(i, i + BATCH_SIZE));
+  }
+  // A failure here (network issue, unexpected response, etc.) must NEVER
+  // prevent the page from rendering -- worst case, citations just show
+  // as plain text instead of links, which is still a fully working page.
+  await Promise.all(batches.map(async (batch) => {
+    try {
+      const quoted = batch.map(c => '"' + c.replace(/"/g, '\"') + '"');
+      const inClause = "in.(" + quoted.join(",") + ")";
+      const resp = await fetch(SUPABASE_URL + "/rest/v1/documents?select=citation,storage_path&citation=" + encodeURIComponent(inClause), { headers: authHeaders() });
+      const found = await resp.json();
+      found.forEach(r => { relatedCitationLookup[r.citation] = r.storage_path; });
+    } catch (e) {
+      console.error("Related-citation batch lookup failed (non-fatal):", e);
+    }
+  }));
 }
 function highlightSearchTerms(query) {
   clearHighlights();
