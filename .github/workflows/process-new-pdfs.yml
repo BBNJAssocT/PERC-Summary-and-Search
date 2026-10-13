@@ -46,11 +46,11 @@ jobs:
 
       # LibreOffice (used for the PDF copy of the summary) only installs when there is work.
       - name: Install LibreOffice
-        if: steps.check.outputs.waiting != '0' || inputs.rebuild_summary
+        if: (steps.check.outputs.waiting != '0' || inputs.rebuild_summary)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libreoffice-writer
 
       - name: Process PDFs and rebuild summaries
-        if: steps.check.outputs.waiting != '0' || inputs.rebuild_summary
+        if: (steps.check.outputs.waiting != '0' || inputs.rebuild_summary)
         run: python cloud/cloud_process.py ${{ inputs.rebuild_summary && '--rebuild' || '' }}

@@ -42,5 +42,5 @@ They sign out and back in to see the **Add PDFs** button.
 ## If something goes wrong
 
 - A run that shows a red X lists which file failed and why on the run's summary page. Failed files stay in `incoming` and are retried at the next run.
-- PDFs already in the archive are moved to `incoming/_skipped/` instead of being summarized again.
+- Duplicates are caught automatically: a PDF with the same file contents, or the same citation and identical text, as one already in the archive is moved to `incoming/_skipped/` instead of being summarized again. The run summary page says which archived file it matched. A PDF that only shares a citation (different text) is added, with a warning on the summary page.
 - `case_summarizer_supabase.py` here is the shared code. It is the same file as the laptop version, and `cloud_process.py` reuses its functions.

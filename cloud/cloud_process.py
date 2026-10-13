@@ -17,8 +17,10 @@ Safety notes
   * It NEVER deletes existing archive rows. The laptop version deleted rows for
     files missing from the scanned folder; here the folder only holds new
     files, so that cleanup is deliberately left out.
-  * A PDF that already exists in the archive is moved to incoming/_skipped/
-    instead of being summarized (and billed) again. Use --force to redo it.
+  * A PDF that is already in the archive is moved to incoming/_skipped/ instead of
+    being summarized (and billed) again. "Already in the archive" means the same
+    storage path, the same file contents, or the same citation with identical text
+    (a re-saved copy under another name). Use --force to redo it.
   * A PDF that fails (unreadable, no text, summary not parseable) stays in
     "incoming" and the run ends with an error so GitHub emails the owner.
 
@@ -48,6 +50,44 @@ SKIPPED_PREFIX = "_skipped/"
 DOCX_KEY = "_Case_Summaries.docx"
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 UNPARSEABLE_SUMMARY = "Could not parse a summary."
+
+# Human-readable notes collected during a run (what each duplicate matched, warnings).
+NOTES: list = []
+
+
+def normalize_text(text: str) -> str:
+    """Whitespace- and case-insensitive form of a decision's text, for comparing copies."""
+    return re.sub(r"\s+", " ", text or "").strip().lower()
+
+
+def find_duplicate(supabase, file_hash: str, citation, full_text: str):
+    """Returns the storage_path of an archived decision that is the same document, else None.
+
+    Same document means: (1) identical file bytes, or (2) the same citation AND identical
+    text once spacing and capitalization are ignored (catches a re-saved copy of the same
+    decision under a different file name). Same citation with different text is NOT a
+    duplicate -- it is noted as a warning, because the citation read from a PDF can be wrong.
+    """
+    hit = supabase.table("documents").select("storage_path").eq("file_hash", file_hash).limit(1).execute()
+    if hit.data:
+        return hit.data[0]["storage_path"]
+    if citation:
+        same = (
+            supabase.table("documents")
+            .select("storage_path,full_text")
+            .eq("citation", citation)
+            .execute()
+        )
+        mine = normalize_text(full_text)
+        for row in same.data or []:
+            if normalize_text(row.get("full_text")) == mine:
+                return row["storage_path"]
+        for row in same.data or []:
+            NOTES.append(
+                f"Warning: {citation} is also the citation of {row['storage_path']}, "
+                "but the text differs, so it was treated as a different decision."
+            )
+    return None
 
 
 def list_waiting(supabase) -> list:
@@ -89,10 +129,15 @@ def process_one(supabase, claude, name: str, force: bool) -> str:
     decision_date = cs.extract_decision_date(full_text)
     storage_path = choose_storage_path(name, decision_date)
 
+    file_hash = hashlib.sha256(data).hexdigest()
+    citation = cs.extract_self_citation(full_text)
+
     existing = (
         supabase.table("documents").select("id").eq("storage_path", storage_path).limit(1).execute()
     )
-    if existing.data and not force:
+    dup_of = storage_path if existing.data else find_duplicate(supabase, file_hash, citation, full_text)
+    if dup_of and not force:
+        NOTES.append(f"{name} is a duplicate of {dup_of} (moved to incoming/_skipped).")
         try:
             incoming.move(name, SKIPPED_PREFIX + name)
         except Exception:
@@ -112,7 +157,7 @@ def process_one(supabase, claude, name: str, force: bool) -> str:
         {
             "filename": name,
             "storage_path": storage_path,
-            "file_hash": hashlib.sha256(data).hexdigest(),
+            "file_hash": file_hash,
             "parties": summary.get("parties", "Not specified"),
             "summary": summary.get("summary", "Not specified"),
             "factors": summary.get("factors", []),
@@ -120,7 +165,7 @@ def process_one(supabase, claude, name: str, force: bool) -> str:
             "category": summary.get("category", "Uncategorized"),
             "full_text": full_text,
             "decision_date": decision_date,
-            "citation": cs.extract_self_citation(full_text),
+            "citation": citation,
             "related_citations": cs.extract_related_decisions(full_text),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         },
@@ -162,6 +207,8 @@ def write_job_summary(added, duplicates, failures, rebuilt):
     lines.append(f"- Word and PDF summaries rebuilt: **{'yes' if rebuilt else 'no'}**")
     for name, why in failures:
         lines.append(f"  - {name}: {why}")
+    for note in NOTES:
+        lines.append(f"- {note}")
     with open(path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
