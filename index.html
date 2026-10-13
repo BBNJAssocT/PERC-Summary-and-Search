@@ -47,6 +47,19 @@
   .search-row #search { flex:1; min-width:0; width:auto; }
   #resetBtn { font-family:inherit; font-size:0.9rem; font-weight:600; color:var(--navy); background:var(--panel); border:1.5px solid var(--rule); border-radius:6px; padding:0 1rem; cursor:pointer; white-space:nowrap; }
   #resetBtn:hover { background:var(--paper); border-color:var(--navy); }
+  [hidden] { display:none !important; }
+  #uploadBtn { margin-top:0.6rem; margin-left:0.5rem; background:var(--navy); color:#fff; font-size:0.85rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:5px; border:none; cursor:pointer; font-family:inherit; }
+  #uploadPanel { margin-top:1rem; background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:1rem; }
+  #uploadPanel .up-title { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.1rem; color:var(--navy); margin-bottom:0.3rem; }
+  #uploadPanel .up-help { margin:0 0 0.8rem; font-size:0.85rem; color:var(--ink-soft); max-width:64ch; line-height:1.45; }
+  #dropZone { border:2px dashed var(--rule); border-radius:6px; padding:1.3rem 1rem; text-align:center; background:var(--panel); color:var(--ink-soft); cursor:pointer; font-size:0.9rem; }
+  #dropZone:hover, #dropZone:focus, #dropZone.over { border-color:var(--navy); background:var(--brass-soft); outline:none; }
+  #uploadList { list-style:none; margin:0.7rem 0 0; padding:0; font-size:0.85rem; }
+  #uploadList li { display:flex; justify-content:space-between; gap:0.75rem; padding:0.3rem 0; border-bottom:1px solid var(--rule); }
+  #uploadList .up-name { min-width:0; overflow-wrap:anywhere; }
+  #uploadList .up-status { flex:none; font-weight:600; }
+  .up-ok { color:#2c6e3f; } .up-err { color:#a33; } .up-wait { color:var(--ink-soft); }
+  #waitingSummary { margin-top:0.7rem; font-size:0.8rem; color:var(--ink-soft); }
   #partialMatchLabel, #leOnlyLabel { display:flex; align-items:center; gap:0.6rem; font-size:0.8rem; color:var(--ink-soft); margin-top:0.55rem; cursor:pointer; }
   #partialMatchLabel input, #leOnlyLabel input { position:absolute; opacity:0; width:0; height:0; }
   .toggle-track { position:relative; width:38px; height:20px; background:var(--slate-soft); border-radius:999px; transition:background 0.15s ease; flex-shrink:0; }
@@ -128,6 +141,15 @@
       </div>
       <p class="tagline">Search by <strong>party name</strong>, <strong>subject category</strong>, or <strong>any keyword</strong> in the full text of every decision. Press Enter to jump to the next match.</p>
       <button id="downloadSummaryBtn">Download Full Summary (PDF)</button>
+      <button id="uploadBtn" type="button" hidden>Add PDFs</button>
+      <div id="uploadPanel" hidden>
+        <div class="up-title">Add new decisions</div>
+        <p class="up-help">Choose PDF files or drop them here. They go to a private waiting folder and are added to the archive, with summaries and links, at the next processing run.</p>
+        <div id="dropZone" tabindex="0" role="button">Tap to choose PDFs, or drop them here</div>
+        <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
+        <ul id="uploadList"></ul>
+        <div id="waitingSummary"></div>
+      </div>
     </div>
   </header>
   <div id="searchBar">
@@ -157,7 +179,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-09-30-reset-button-v9</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-13-admin-upload-v10</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -265,6 +287,7 @@ document.getElementById("loginBtn").onclick = async () => {
   const meta = (data.user && data.user.user_metadata) || {};
   currentDisplayName = meta.display_name || "";
   renderWelcome();
+  updateAdminUi();
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("app").style.display = "block";
   await loadChipData();
@@ -298,6 +321,7 @@ async function editDisplayName() {
 }
 document.getElementById("signOutBtn").onclick = () => {
   accessToken = null;
+  updateAdminUi();
   document.getElementById("app").style.display = "none";
   document.getElementById("loginScreen").style.display = "flex";
   document.getElementById("password").value = "";
@@ -624,6 +648,98 @@ function resetSearch() {
   searchEl.focus();
 }
 document.getElementById("resetBtn").onclick = resetSearch;
+
+// ---- Admin-only PDF upload ----
+// The button only appears for accounts whose app_metadata.role is "admin" (readable from
+// the sign-in token). This is display only: the real gate is the storage policy on the
+// private "incoming" bucket, which rejects uploads from anyone who is not an admin.
+function tokenRole(token) {
+  try {
+    let p = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (p.length % 4) p += '=';
+    const claims = JSON.parse(atob(p));
+    return (claims.app_metadata && claims.app_metadata.role) || null;
+  } catch (e) { return null; }
+}
+function updateAdminUi() {
+  const isAdmin = Boolean(accessToken) && tokenRole(accessToken) === 'admin';
+  document.getElementById('uploadBtn').hidden = !isAdmin;
+  if (!isAdmin) document.getElementById('uploadPanel').hidden = true;
+}
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+function uploadKeyFor(name) {
+  return name.replace(/[^\w\s.()\-]/g, '_').trim();
+}
+async function uploadOne(file, statusEl) {
+  const nameOk = /\.pdf$/i.test(file.name);
+  if (!nameOk) { statusEl.textContent = 'Not a PDF'; statusEl.className = 'up-status up-err'; return false; }
+  if (file.size > MAX_UPLOAD_BYTES) { statusEl.textContent = 'Over 50 MB'; statusEl.className = 'up-status up-err'; return false; }
+  statusEl.textContent = 'Uploading...'; statusEl.className = 'up-status up-wait';
+  try {
+    const resp = await fetch(SUPABASE_URL + '/storage/v1/object/incoming/' + encodeStoragePath(uploadKeyFor(file.name)), {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/pdf', 'x-upsert': 'false' },
+      body: file,
+    });
+    if (resp.ok) { statusEl.textContent = 'Waiting for processing'; statusEl.className = 'up-status up-ok'; return true; }
+    let msg = ''; try { const j = await resp.json(); msg = (j.message || j.error || '').toLowerCase(); } catch (e) {}
+    if (resp.status === 409 || msg.indexOf('already exists') >= 0 || msg.indexOf('duplicate') >= 0) {
+      statusEl.textContent = 'Already waiting';
+    } else if (resp.status === 401 || resp.status === 403 || msg.indexOf('row-level security') >= 0) {
+      statusEl.textContent = 'Not allowed';
+    } else {
+      statusEl.textContent = 'Failed';
+    }
+    statusEl.className = 'up-status up-err';
+    return false;
+  } catch (e) {
+    statusEl.textContent = 'Network error'; statusEl.className = 'up-status up-err';
+    return false;
+  }
+}
+async function uploadFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  const list = document.getElementById('uploadList');
+  list.innerHTML = '';
+  const rows = files.map(f => {
+    const li = document.createElement('li');
+    const n = document.createElement('span'); n.className = 'up-name'; n.textContent = f.name;
+    const s = document.createElement('span'); s.className = 'up-status up-wait'; s.textContent = 'Queued';
+    li.appendChild(n); li.appendChild(s); list.appendChild(li);
+    return s;
+  });
+  for (let i = 0; i < files.length; i++) { await uploadOne(files[i], rows[i]); }
+  await refreshWaiting();
+}
+async function refreshWaiting() {
+  const el = document.getElementById('waitingSummary');
+  try {
+    const resp = await fetch(SUPABASE_URL + '/storage/v1/object/list/incoming', {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: '', limit: 200, offset: 0 }),
+    });
+    if (!resp.ok) { el.textContent = ''; return; }
+    const items = (await resp.json()).filter(o => o.name && o.name.charAt(0) !== '.');
+    el.textContent = items.length === 0
+      ? 'No files are waiting to be processed.'
+      : items.length + (items.length === 1 ? ' file is' : ' files are') + ' waiting to be processed.';
+  } catch (e) { el.textContent = ''; }
+}
+document.getElementById('uploadBtn').onclick = () => {
+  const panel = document.getElementById('uploadPanel');
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) refreshWaiting();
+};
+const dropZoneEl = document.getElementById('dropZone');
+const fileInputEl = document.getElementById('fileInput');
+dropZoneEl.onclick = () => fileInputEl.click();
+dropZoneEl.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputEl.click(); } };
+fileInputEl.onchange = async () => { await uploadFiles(fileInputEl.files); fileInputEl.value = ''; };
+dropZoneEl.ondragover = (e) => { e.preventDefault(); dropZoneEl.classList.add('over'); };
+dropZoneEl.ondragleave = () => dropZoneEl.classList.remove('over');
+dropZoneEl.ondrop = (e) => { e.preventDefault(); dropZoneEl.classList.remove('over'); uploadFiles(e.dataTransfer.files); };
 document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Summaries.pdf");
 checkInviteOrRecoveryLink();
 </script>
