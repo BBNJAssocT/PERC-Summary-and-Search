@@ -121,6 +121,7 @@ def process_one(supabase, claude, name: str, force: bool) -> str:
             "full_text": full_text,
             "decision_date": decision_date,
             "citation": cs.extract_self_citation(full_text),
+            "related_citations": cs.extract_related_decisions(full_text),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         },
         on_conflict="storage_path",

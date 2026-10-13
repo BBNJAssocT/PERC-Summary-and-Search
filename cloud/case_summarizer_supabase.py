@@ -29,6 +29,21 @@ SETUP (one time)
 3. Set CASE_SUMMARIZER_FOLDER to your local PDF folder (same as before):
        export CASE_SUMMARIZER_FOLDER="/path/to/your/pdf/folder"
 
+4. OPTIONAL -- automatic website publishing. If you'd like this script to
+   push an updated index.html straight to your live website's GitHub repo
+   (skipping the manual "download, log into GitHub, upload" steps), set:
+       export GITHUB_TOKEN="github_pat_..."
+   To create this token: GitHub -> Settings -> Developer settings ->
+   Personal access tokens -> Fine-grained tokens -> Generate new token.
+   Scope it to ONLY the PERC-Summary-and-Search repository, with
+   Repository permissions -> Contents: Read and write. Nothing else.
+   Treat this token exactly like your other keys -- environment variable
+   only, never shared. Without this variable set, the script still works
+   completely normally; it just skips the website-publishing step.
+   With it set: whenever you save a new index.html (given to you by
+   Claude) into this same folder, the next script run publishes it
+   automatically -- no GitHub website visit needed at all.
+
 -----------------------------------------------------------------
 USAGE
 -----------------------------------------------------------------
@@ -61,6 +76,17 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 PDF_BUCKET = "case-pdfs"
 SUMMARY_SNAPSHOT_KEY = "_Case_Summaries.pdf"   # leading underscore keeps it sorted first,
                                                  # away from real case filenames in the bucket
+
+# Website auto-publish: if a local index.html sits in the scanned folder,
+# this script pushes it to the GitHub repo powering the live search site --
+# no manual "download, log into GitHub, upload" steps needed anymore.
+# Whenever Claude gives you an updated index.html, just save it into this
+# same folder (overwriting the old one); the next script run publishes it.
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")          # a Personal Access Token, see setup notes
+GITHUB_REPO = "bbnjassoct/PERC-Summary-and-Search"
+GITHUB_BRANCH = "main"
+GITHUB_FILE_PATH = "index.html"
+WEBSITE_LOCAL_FILENAME = "index.html"
 
 # Filenames this script itself generates -- excluded when scanning for case
 # PDFs, so the script never tries to re-summarize its own output.
@@ -320,6 +346,7 @@ def scan_and_summarize(base_folder: str, supabase, force: bool = False):
         category = data.get("category", "Uncategorized")
         decision_date = extract_decision_date(full_text)
         self_citation = extract_self_citation(full_text)
+        related_citations = extract_related_decisions(full_text)
 
         # Upload the actual PDF bytes to Supabase Storage
         with open(local_path, "rb") as f:
@@ -347,6 +374,7 @@ def scan_and_summarize(base_folder: str, supabase, force: bool = False):
                 "full_text": full_text,
                 "decision_date": decision_date,
                 "citation": self_citation,
+                "related_citations": related_citations,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             },
             on_conflict="storage_path",
@@ -543,7 +571,29 @@ def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> bool:
         pass
 
     import shutil, subprocess
+
+    # shutil.which() only searches the PATH environment variable -- but
+    # apps launched via Automator/Finder often get a much shorter PATH
+    # than a normal Terminal window does (Terminal loads your shell
+    # profile, e.g. ~/.zshrc; Automator typically does not). That means
+    # LibreOffice can work perfectly when you run this script by typing
+    # into Terminal, yet silently fail to be found when the exact same
+    # script runs via the Automator app -- leaving the OLD PDF in place
+    # with no error visible in Automator's usual (silent) execution.
+    # To make this robust regardless of how it's launched, also check
+    # the common, fixed install locations directly.
+    known_paths = [
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+        "/opt/homebrew/bin/soffice",
+        "/usr/local/bin/soffice",
+    ]
     soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if not soffice:
+        for candidate in known_paths:
+            if os.path.exists(candidate):
+                soffice = candidate
+                break
+
     if soffice:
         try:
             subprocess.run(
@@ -557,7 +607,12 @@ def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> bool:
                 print(f"PDF written to: {pdf_path}")
                 return True
         except Exception as e:
-            print(f"LibreOffice conversion failed: {e}")
+            print(f"LibreOffice conversion failed (found soffice at {soffice}): {e}")
+    else:
+        print(
+            "Could not find LibreOffice in PATH or in any common install "
+            "location: " + ", ".join(known_paths)
+        )
 
     print(
         "Could not create a PDF automatically. Install LibreOffice (free, "
@@ -604,9 +659,94 @@ def terminal_search(term: str, supabase):
     print()
 
 
+def push_website_to_github(folder: str):
+    """Pushes the local index.html (if present in the scanned folder) to the
+    GitHub repo powering the live search website, via GitHub's Contents API.
+    Skips quietly if no local index.html exists, or if GITHUB_TOKEN isn't set
+    (so this feature is entirely optional -- the rest of the script works
+    fine without it)."""
+    import base64
+    import urllib.request
+    import urllib.error
+
+    local_path = os.path.join(folder, WEBSITE_LOCAL_FILENAME)
+    if not os.path.exists(local_path):
+        return  # nothing to publish -- not an error, just skip
+    if not GITHUB_TOKEN:
+        print(
+            "\nNote: found a local index.html but GITHUB_TOKEN isn't set, "
+            "so it wasn't published to the website. See the setup notes "
+            "at the top of this script if you'd like this automated."
+        )
+        return
+
+    with open(local_path, "rb") as f:
+        new_content = f.read()
+
+    api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "case-summarizer-script",
+    }
+
+    # Step 1: get the current file's SHA (required by GitHub's API to
+    # update an existing file -- without it, this would be treated as
+    # trying to create a brand new file at a path that already exists).
+    try:
+        req = urllib.request.Request(f"{api_url}?ref={GITHUB_BRANCH}", headers=headers)
+        with urllib.request.urlopen(req) as resp:
+            current = json.loads(resp.read())
+        current_sha = current["sha"]
+        unchanged = base64.b64decode(current["content"]) == new_content
+        if unchanged:
+            print("Website file unchanged -- skipping GitHub publish.")
+            return
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            current_sha = None  # file doesn't exist yet -- will be created
+        else:
+            print(f"WARNING: Could not check current website file on GitHub: {e}")
+            return
+
+    # Step 2: push the new content
+    payload = {
+        "message": f"Update website ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+        "content": base64.b64encode(new_content).decode("ascii"),
+        "branch": GITHUB_BRANCH,
+    }
+    if current_sha:
+        payload["sha"] = current_sha
+
+    try:
+        req = urllib.request.Request(
+            api_url, data=json.dumps(payload).encode(), headers=headers, method="PUT"
+        )
+        with urllib.request.urlopen(req):
+            print(f"Website published to GitHub ({GITHUB_REPO}).")
+    except urllib.error.HTTPError as e:
+        print(f"WARNING: Website publish to GitHub failed: {e.code} {e.read().decode()}")
+
+
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
+class _Tee:
+    """Writes to multiple streams at once -- lets every print() statement
+    go to both the normal console AND a log file simultaneously, so a run
+    launched via Automator (which may not show any output at all) is
+    still fully diagnosable afterward by just opening the log file."""
+    def __init__(self, *streams):
+        self.streams = streams
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+            s.flush()
+    def flush(self):
+        for s in self.streams:
+            s.flush()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Scan local PDFs, summarize with Claude, sync to Supabase.")
     parser.add_argument("--folder", default=BASE_FOLDER, help="Base folder to scan")
@@ -618,16 +758,38 @@ def main():
         print(f"ERROR: Folder not found: {args.folder}\nSet CASE_SUMMARIZER_FOLDER or pass --folder \"/path/to/folder\".")
         sys.exit(1)
 
-    supabase = get_supabase_client()
+    # Every run's full output (including any crash/traceback) is captured
+    # here, overwriting the previous run's log -- check this file any time
+    # something seems off, especially after running via the Automator app,
+    # which typically doesn't show you its output live.
+    log_path = os.path.join(args.folder, "last_run_log.txt")
+    log_file = open(log_path, "w")
+    original_stdout, original_stderr = sys.stdout, sys.stderr
+    sys.stdout = _Tee(original_stdout, log_file)
+    sys.stderr = _Tee(original_stderr, log_file)
+    print(f"=== Run started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
 
-    if args.search:
-        terminal_search(args.search, supabase)
-        return
+    try:
+        supabase = get_supabase_client()
 
-    scan_and_summarize(args.folder, supabase, force=args.force)
-    build_docx(supabase, DOCX_OUTPUT)
-    convert_docx_to_pdf(DOCX_OUTPUT, PDF_OUTPUT)
-    upload_summary_pdf(supabase, PDF_OUTPUT)
+        if args.search:
+            terminal_search(args.search, supabase)
+            return
+
+        scan_and_summarize(args.folder, supabase, force=args.force)
+        build_docx(supabase, DOCX_OUTPUT)
+        convert_docx_to_pdf(DOCX_OUTPUT, PDF_OUTPUT)
+        upload_summary_pdf(supabase, PDF_OUTPUT)
+        push_website_to_github(args.folder)
+        print(f"=== Run finished successfully: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
+    except Exception:
+        import traceback
+        print("=== Run FAILED with an error: ===")
+        traceback.print_exc()
+        raise
+    finally:
+        sys.stdout, sys.stderr = original_stdout, original_stderr
+        log_file.close()
 
 
 if __name__ == "__main__":
