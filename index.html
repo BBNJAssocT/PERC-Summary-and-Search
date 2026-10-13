@@ -56,7 +56,7 @@
   #dropZone { border:2px dashed var(--rule); border-radius:6px; padding:1.3rem 1rem; text-align:center; background:var(--panel); color:var(--ink-soft); cursor:pointer; font-size:0.9rem; }
   #dropZone:hover, #dropZone:focus, #dropZone.over { border-color:var(--navy); background:var(--brass-soft); outline:none; }
   #uploadList { list-style:none; margin:0.7rem 0 0; padding:0; font-size:0.85rem; }
-  #uploadList li { display:flex; justify-content:space-between; gap:0.75rem; padding:0.3rem 0; border-bottom:1px solid var(--rule); }
+  #uploadList li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:0.25rem 0.75rem; padding:0.3rem 0; border-bottom:1px solid var(--rule); }
   #uploadList .up-name { min-width:0; overflow-wrap:anywhere; }
   #uploadList .up-status { flex:none; font-weight:600; }
   .up-ok { color:#2c6e3f; } .up-err { color:#a33; } .up-wait { color:var(--ink-soft); }
@@ -146,7 +146,7 @@
       <button id="uploadBtn" type="button" hidden>Add PDFs</button>
       <div id="uploadPanel" hidden>
         <div class="up-title">Add new decisions</div>
-        <p class="up-help">Choose PDF files or drop them here. They go to a private waiting folder and are added to the archive, with summaries and links, at the next processing run.</p>
+        <p class="up-help">Choose PDF files or drop them here. They go to a private waiting folder. At the next processing run each one is summarized, filed in its year folder (taken from the year in the file name, like PERC 2026 12.pdf), and added to the archive with its links.</p>
         <div id="dropZone" tabindex="0" role="button">Tap to choose PDFs, or drop them here</div>
         <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
         <ul id="uploadList"></ul>
@@ -181,7 +181,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-13-word-button-v11</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-13-year-folder-note-v12</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -685,6 +685,13 @@ function updateAdminUi() {
   if (!isAdmin) document.getElementById('uploadPanel').hidden = true;
 }
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+// Same rule the processing run uses to pick the year folder: the first 4-digit year in the
+// file name (PERC 2026 12.pdf goes to 2026/). With no year in the name it falls back to the
+// decision date found inside the PDF.
+function yearFolderFor(name) {
+  const m = name.match(/(^|\D)((?:19|20)\d{2})(?!\d)/);
+  return m ? m[2] : null;
+}
 function uploadKeyFor(name) {
   return name.replace(/[^\w\s.()\-]/g, '_').trim();
 }
@@ -699,7 +706,12 @@ async function uploadOne(file, statusEl) {
       headers: { ...authHeaders(), 'Content-Type': 'application/pdf', 'x-upsert': 'false' },
       body: file,
     });
-    if (resp.ok) { statusEl.textContent = 'Waiting for processing'; statusEl.className = 'up-status up-ok'; return true; }
+    if (resp.ok) {
+      const y = yearFolderFor(file.name);
+      statusEl.textContent = 'Waiting. Will be filed in ' + (y ? 'the ' + y + ' folder' : 'a year folder from its decision date');
+      statusEl.className = 'up-status up-ok';
+      return true;
+    }
     let msg = ''; try { const j = await resp.json(); msg = (j.message || j.error || '').toLowerCase(); } catch (e) {}
     if (resp.status === 409 || msg.indexOf('already exists') >= 0 || msg.indexOf('duplicate') >= 0) {
       statusEl.textContent = 'Already waiting';
