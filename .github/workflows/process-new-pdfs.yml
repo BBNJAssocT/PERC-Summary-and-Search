@@ -1,0 +1,56 @@
+name: Process new PDFs
+
+# Runs every morning (about 5 AM Eastern) and whenever someone presses "Run workflow"
+# on the Actions tab (works from the GitHub website or phone app).
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+    inputs:
+      rebuild_summary:
+        description: "Rebuild the Word and PDF summaries even if no new PDFs are waiting"
+        type: boolean
+        default: false
+
+# Never run two at once, and never cancel a run that is part-way through.
+concurrency:
+  group: process-new-pdfs
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: cloud/requirements.txt
+
+      - name: Install Python packages
+        run: pip install -r cloud/requirements.txt
+
+      - name: Check for waiting PDFs
+        id: check
+        run: python cloud/cloud_process.py --count
+
+      # LibreOffice (used for the PDF copy of the summary) only installs when there is work.
+      - name: Install LibreOffice
+        if: steps.check.outputs.waiting != '0' || inputs.rebuild_summary
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer
+
+      - name: Process PDFs and rebuild summaries
+        if: steps.check.outputs.waiting != '0' || inputs.rebuild_summary
+        run: python cloud/cloud_process.py ${{ inputs.rebuild_summary && '--rebuild' || '' }}

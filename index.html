@@ -48,6 +48,7 @@
   #resetBtn { font-family:inherit; font-size:0.9rem; font-weight:600; color:var(--navy); background:var(--panel); border:1.5px solid var(--rule); border-radius:6px; padding:0 1rem; cursor:pointer; white-space:nowrap; }
   #resetBtn:hover { background:var(--paper); border-color:var(--navy); }
   [hidden] { display:none !important; }
+  #downloadWordBtn { margin-top:0.6rem; margin-left:0.5rem; background:var(--brass); color:#fff; font-size:0.85rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:5px; border:none; cursor:pointer; font-family:inherit; }
   #uploadBtn { margin-top:0.6rem; margin-left:0.5rem; background:var(--navy); color:#fff; font-size:0.85rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:5px; border:none; cursor:pointer; font-family:inherit; }
   #uploadPanel { margin-top:1rem; background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:1rem; }
   #uploadPanel .up-title { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.1rem; color:var(--navy); margin-bottom:0.3rem; }
@@ -141,6 +142,7 @@
       </div>
       <p class="tagline">Search by <strong>party name</strong>, <strong>subject category</strong>, or <strong>any keyword</strong> in the full text of every decision. Press Enter to jump to the next match.</p>
       <button id="downloadSummaryBtn">Download Full Summary (PDF)</button>
+      <button id="downloadWordBtn" type="button" hidden>Download Full Summary (Word)</button>
       <button id="uploadBtn" type="button" hidden>Add PDFs</button>
       <div id="uploadPanel" hidden>
         <div class="up-title">Add new decisions</div>
@@ -179,7 +181,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-13-admin-upload-v10</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-13-word-button-v11</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -329,7 +331,23 @@ document.getElementById("signOutBtn").onclick = () => {
 function authHeaders() {
   return { "apikey": ANON_KEY, "Authorization": "Bearer " + accessToken };
 }
+// The Word summary is created by the online processing run. Show its button only once the
+// file exists, so members never see a button that does nothing.
+async function checkWordSummary() {
+  const btn = document.getElementById("downloadWordBtn");
+  btn.hidden = true;
+  try {
+    const resp = await fetch(SUPABASE_URL + "/storage/v1/object/sign/case-pdfs/" + encodeStoragePath("_Case_Summaries.docx"), {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: 60 }),
+    });
+    const data = await resp.json();
+    btn.hidden = !(resp.ok && data && data.signedURL);
+  } catch (e) { btn.hidden = true; }
+}
 async function loadChipData() {
+  checkWordSummary();
   const resp = await fetch(SUPABASE_URL + "/rest/v1/documents?select=category,decision_date", { headers: authHeaders() });
   allLightweightRows = await resp.json();
   buildChips();
@@ -626,7 +644,7 @@ async function openPdf(storagePath) {
   });
   const data = await resp.json();
   if (data.signedURL) window.open(SUPABASE_URL + "/storage/v1" + data.signedURL, "_blank");
-  else alert("Could not open that PDF right now.");
+  else alert("Could not open that file right now.");
 }
 // Reset: clears the search box, category/year filters and both toggles so a
 // brand-new search starts from the full, unfiltered list.
@@ -741,6 +759,7 @@ dropZoneEl.ondragover = (e) => { e.preventDefault(); dropZoneEl.classList.add('o
 dropZoneEl.ondragleave = () => dropZoneEl.classList.remove('over');
 dropZoneEl.ondrop = (e) => { e.preventDefault(); dropZoneEl.classList.remove('over'); uploadFiles(e.dataTransfer.files); };
 document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Summaries.pdf");
+document.getElementById("downloadWordBtn").onclick = () => openPdf("_Case_Summaries.docx");
 checkInviteOrRecoveryLink();
 </script>
 </body>
