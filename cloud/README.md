@@ -25,7 +25,7 @@ The service key bypasses all access rules. Keep it only in GitHub Secrets.
 
 ## Running it by hand
 
-Repo > **Actions** > **Process new PDFs** > **Run workflow**. Tick "Rebuild" to regenerate the Word and PDF summaries even when nothing new is waiting. This also works from the GitHub phone app.
+Repo > **Actions** > **Process new PDFs** > **Run workflow**. The Word and PDF summaries are rebuilt on every run, so removals made in Supabase show up too. This also works from the GitHub phone app.
 
 ## Making someone an admin
 

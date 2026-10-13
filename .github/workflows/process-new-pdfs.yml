@@ -6,11 +6,6 @@ on:
   schedule:
     - cron: "17 9 * * *"
   workflow_dispatch:
-    inputs:
-      rebuild_summary:
-        description: "Rebuild the Word and PDF summaries even if no new PDFs are waiting"
-        type: boolean
-        default: false
 
 # Never run two at once, and never cancel a run that is part-way through.
 concurrency:
@@ -40,17 +35,12 @@ jobs:
       - name: Install Python packages
         run: pip install -r cloud/requirements.txt
 
-      - name: Check for waiting PDFs
-        id: check
-        run: python cloud/cloud_process.py --count
-
-      # LibreOffice (used for the PDF copy of the summary) only installs when there is work.
+      # Always rebuilds the Word and PDF summaries, so removals and edits made in
+      # Supabase show up too. No Claude usage is billed when nothing new is waiting.
       - name: Install LibreOffice
-        if: (steps.check.outputs.waiting != '0' || inputs.rebuild_summary)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libreoffice-writer
 
       - name: Process PDFs and rebuild summaries
-        if: (steps.check.outputs.waiting != '0' || inputs.rebuild_summary)
-        run: python cloud/cloud_process.py ${{ inputs.rebuild_summary && '--rebuild' || '' }}
+        run: python cloud/cloud_process.py --rebuild
