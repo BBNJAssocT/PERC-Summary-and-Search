@@ -26,6 +26,10 @@
   .powered-by { display:flex; flex-direction:column; align-items:flex-start; gap:0.35rem; margin-top:0.7rem; }
   .powered-by .pb-label { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:#8FA3C2; }
   .powered-by img { width:min(280px,70vw); height:auto; display:block; border-radius:4px; }
+  .get-app { position:relative; z-index:2; text-align:center; max-width:340px; }
+  #getAppBtn { background:transparent; color:#fff; border:1.5px solid var(--chrome); font-family:inherit; font-size:0.9rem; font-weight:600; padding:0.6rem 1.1rem; border-radius:6px; cursor:pointer; }
+  #getAppBtn:hover { background:rgba(255,255,255,0.08); }
+  #getAppHelp { margin-top:0.7rem; font-size:0.82rem; line-height:1.5; color:#AEB9CC; }
   .powered-by.center { align-items:center; position:relative; z-index:2; margin-top:0; }
   #setPasswordScreen { background:var(--night); }
   header.hero { background:var(--night) !important; border-bottom:3px solid var(--brass) !important; }
@@ -136,6 +140,10 @@
     <div id="loginError"></div>
   </div>
   <div class="powered-by center"><span class="pb-label">Powered by</span><img src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C."></div>
+  <div id="getApp" class="get-app">
+    <button id="getAppBtn" type="button">&#128241; Get the Mobile App</button>
+    <div id="getAppHelp" hidden></div>
+  </div>
 </div>
 <div id="setPasswordScreen" style="display:none;">
   <div class="login-card">
@@ -200,7 +208,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-17-app-install-v15</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-17-get-app-login-v16</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -793,16 +801,31 @@ document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Sum
 document.getElementById("downloadWordBtn").onclick = () => openPdf("_Case_Summaries.docx");
 checkInviteOrRecoveryLink();
 
-// Install-as-app support (Android/desktop Chrome/Edge prompt; iOS shows a tip).
+// Install-as-app support: a "Get the Mobile App" button on the login page (for everyone)
+// and an "Install App" button after sign-in. Uses the browser's install prompt when available,
+// otherwise shows simple add-to-home-screen steps for the device.
 (function(){
   let deferred=null;
   const btn=document.getElementById("installBtn"), hint=document.getElementById("iosHint");
+  const getBox=document.getElementById("getApp"), getBtn=document.getElementById("getAppBtn"), help=document.getElementById("getAppHelp");
   const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
+  const ua=navigator.userAgent;
+  const ios=/iphone|ipad|ipod/i.test(ua)||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1);
+  const android=/android/i.test(ua);
+  if(standalone){getBox.hidden=true;}
+  function steps(){
+    if(ios)return "On iPhone or iPad: tap the Share button in Safari, then &ldquo;Add to Home Screen&rdquo;.";
+    if(android)return "On Android: open the browser menu (&#8942;), then tap &ldquo;Install app&rdquo; or &ldquo;Add to Home screen&rdquo;.";
+    return "On a computer: in Chrome or Edge, click the install icon in the address bar (or the browser menu, then &ldquo;Install&rdquo;). On a phone, open this page there and choose &ldquo;Add to Home Screen&rdquo;.";
+  }
+  async function install(){
+    if(deferred){deferred.prompt();try{await deferred.userChoice;}catch(_){ }deferred=null;btn.hidden=true;return;}
+    help.innerHTML=steps();help.hidden=false;
+  }
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;if(!standalone)btn.hidden=false;});
-  btn.onclick=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice;}catch(_){ }deferred=null;btn.hidden=true;};
-  window.addEventListener("appinstalled",()=>{btn.hidden=true;});
-  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!standalone;
-  if(ios)hint.hidden=false;
+  window.addEventListener("appinstalled",()=>{btn.hidden=true;getBox.hidden=true;});
+  btn.onclick=install; getBtn.onclick=install;
+  if(ios&&!standalone)hint.hidden=false;
 })();
 </script>
 </body>
