@@ -36,7 +36,7 @@
   .hero p.tagline { color:#AEB9CC !important; }
   .hero p.tagline strong { color:#fff; }
   .login-card { border-top-color:var(--brass); }
-  @media (max-width:560px) { .hero h1 { font-size:1.4rem; } #downloadWordBtn, #uploadBtn, #downloadSummaryBtn { margin-left:0 !important; } .hero-inner button { display:block; width:100%; margin-top:0.5rem; } #downloadWordBtn[hidden], #uploadBtn[hidden] { display:none !important; } }
+  @media (max-width:560px) { .hero h1 { font-size:1.4rem; } #downloadWordBtn, #uploadBtn, #downloadSummaryBtn, #installBtn { margin-left:0 !important; } .hero-inner button { display:block; width:100%; margin-top:0.5rem; } #downloadWordBtn[hidden], #uploadBtn[hidden], #installBtn[hidden] { display:none !important; } }
   #setPasswordScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
   .login-card { background:var(--panel); border:1px solid var(--rule); border-top:4px solid var(--brass); border-radius:6px; padding:2rem; max-width:380px; width:100%; position:relative; z-index:2; box-shadow:0 8px 30px rgba(11,37,69,0.15); }
   .login-card h1 { font-family:'Spectral',Georgia,serif; font-weight:600; color:var(--navy); margin:0 0 0.3rem; font-size:1.6rem; }
@@ -68,6 +68,8 @@
   #resetBtn:hover { background:var(--paper); border-color:var(--navy); }
   [hidden] { display:none !important; }
   #downloadWordBtn { margin-top:0.6rem; margin-left:0.5rem; background:var(--brass); color:#fff; font-size:0.85rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:5px; border:none; cursor:pointer; font-family:inherit; }
+  #installBtn { margin-top:0.6rem; margin-left:0.5rem; background:transparent; color:#fff; border:1.5px solid var(--chrome); font-size:0.85rem; font-weight:600; padding:0.45rem 0.9rem; border-radius:5px; cursor:pointer; font-family:inherit; }
+  #iosHint { margin-top:0.6rem; font-size:0.8rem; color:#AEB9CC; }
   #uploadBtn { margin-top:0.6rem; margin-left:0.5rem; background:var(--navy); color:#fff; font-size:0.85rem; font-weight:600; padding:0.5rem 0.9rem; border-radius:5px; border:none; cursor:pointer; font-family:inherit; }
   #uploadPanel { margin-top:1rem; background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:1rem; }
   #uploadPanel .up-title { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.1rem; color:var(--navy); margin-bottom:0.3rem; }
@@ -158,7 +160,9 @@
       <p class="tagline">Search by <strong>party name</strong>, <strong>subject category</strong>, or <strong>any keyword</strong> in the full text of every decision. Press Enter to jump to the next match.</p>
       <button id="downloadSummaryBtn">Download Full Summary (PDF)</button>
       <button id="downloadWordBtn" type="button" hidden>Download Full Summary (Word)</button>
+      <button id="installBtn" type="button" hidden>Install App</button>
       <button id="uploadBtn" type="button" hidden>Add PDFs</button>
+      <div id="iosHint" hidden>To install on iPhone or iPad: tap Share, then &ldquo;Add to Home Screen&rdquo;.</div>
       <div id="uploadPanel" hidden>
         <div class="up-title">Add new decisions</div>
         <p class="up-help">Choose PDF files or drop them here. They go to a private waiting folder. At the next processing run each one is summarized, filed in its year folder (taken from the year in the file name, like PERC 2026 12.pdf), and added to the archive with its links.</p>
@@ -196,7 +200,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-17-njperc-title-poweredby-v14</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-17-app-install-v15</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
@@ -788,6 +792,18 @@ dropZoneEl.ondrop = (e) => { e.preventDefault(); dropZoneEl.classList.remove('ov
 document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Summaries.pdf");
 document.getElementById("downloadWordBtn").onclick = () => openPdf("_Case_Summaries.docx");
 checkInviteOrRecoveryLink();
+
+// Install-as-app support (Android/desktop Chrome/Edge prompt; iOS shows a tip).
+(function(){
+  let deferred=null;
+  const btn=document.getElementById("installBtn"), hint=document.getElementById("iosHint");
+  const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;if(!standalone)btn.hidden=false;});
+  btn.onclick=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice;}catch(_){ }deferred=null;btn.hidden=true;};
+  window.addEventListener("appinstalled",()=>{btn.hidden=true;});
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!standalone;
+  if(ios)hint.hidden=false;
+})();
 </script>
 </body>
 </html>
