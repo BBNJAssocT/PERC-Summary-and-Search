@@ -3,21 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Member Login TEST</title>
+<title>Resilient | Case Archive</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta name="theme-color" content="#00142B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Resilient">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper:#F6F4EE; --panel:#FFFFFF; --ink:#22282F; --ink-soft:#5B6470;
-    --rule:#D8CFA8; --navy:#0B2545; --navy-soft:#1E3F6B; --brass:#C9A227;
-    --brass-soft:#F6ECC9; --slate:#6B7280; --slate-soft:#E8E9EB;
-    --gold-deep:#9A7A1E;
+    --paper:#F2F5FA; --panel:#FFFFFF; --ink:#16202E; --ink-soft:#56627A;
+    --rule:#CBD5E4; --navy:#00142B; --navy-soft:#1559B8; --brass:#1F6FE5;
+    --brass-soft:#E4EEFD; --slate:#6B7686; --slate-soft:#E3E8F0;
+    --gold-deep:#1559B8; --chrome:#C9CED6; --night:#000F1E;
   }
   * { box-sizing: border-box; }
   body { font-family:'IBM Plex Sans',-apple-system,Segoe UI,Arial,sans-serif; margin:0; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
   .mono { font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace; }
-  #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; position:relative; overflow:hidden; background:var(--paper); }
-  #shieldWatermark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:520px; height:auto; color:var(--navy); opacity:0.07; z-index:1; pointer-events:none; }
+  #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; position:relative; overflow:hidden; background:var(--night); flex-direction:column; gap:1.25rem; }
+  #loginBanner { width:min(520px,92vw); height:auto; border-radius:6px; position:relative; z-index:2; display:block; }
+  .brand-banner { width:min(420px,100%); height:auto; display:block; border-radius:5px; margin:0 0 0.9rem; }
+  #setPasswordScreen { background:var(--night); }
+  header.hero { background:var(--night) !important; border-bottom:3px solid var(--brass) !important; }
+  .hero h1 { color:#fff !important; }
+  #welcomeMsg, #welcomeMsg strong { color:var(--chrome) !important; }
+  #welcomeMsg .edit-name { color:#7DB2FF !important; }
+  #signOutBtn { color:var(--chrome) !important; border-color:#33507A !important; }
+  .hero p.tagline { color:#AEB9CC !important; }
+  .hero p.tagline strong { color:#fff; }
+  .login-card { border-top-color:var(--brass); }
+  @media (max-width:560px) { .hero h1 { font-size:1.4rem; } #downloadWordBtn, #uploadBtn, #downloadSummaryBtn { margin-left:0 !important; } .hero-inner button { display:block; width:100%; margin-top:0.5rem; } #downloadWordBtn[hidden], #uploadBtn[hidden] { display:none !important; } }
   #setPasswordScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
   .login-card { background:var(--panel); border:1px solid var(--rule); border-top:4px solid var(--brass); border-radius:6px; padding:2rem; max-width:380px; width:100%; position:relative; z-index:2; box-shadow:0 8px 30px rgba(11,37,69,0.15); }
   .login-card h1 { font-family:'Spectral',Georgia,serif; font-weight:600; color:var(--navy); margin:0 0 0.3rem; font-size:1.6rem; }
@@ -72,13 +89,13 @@
   #matchNav button { font-family:inherit; font-size:0.82rem; font-weight:600; color:var(--navy); background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:0.3rem 0.65rem; cursor:pointer; }
   #matchNav button:hover { background:var(--paper); }
   #matchCount { font-family:'IBM Plex Mono',monospace; font-size:0.8rem; }
-  mark.search-hit { background:#F6E9C9; color:inherit; padding:0 2px; border-radius:2px; }
+  mark.search-hit { background:#CFE1FC; color:inherit; padding:0 2px; border-radius:2px; }
   mark.search-hit.active { background:var(--brass); color:#fff; }
   .chip-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.9rem; }
   .chip { font-family:inherit; font-size:0.82rem; font-weight:500; color:var(--navy); background:var(--panel); border:1px solid var(--rule); border-bottom:2.5px solid var(--rule); border-radius:4px 4px 0 0; padding:0.35rem 0.7rem; cursor:pointer; }
   .chip .n { color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; font-size:0.75rem; margin-left:0.35rem; }
   .chip.active { border-bottom-color:var(--navy); background:var(--navy); color:#fff; }
-  .chip.active .n { color:#CFE0F0; }
+  .chip.active .n { color:#BBD3F5; }
   main { max-width:820px; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
   .status-bar { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:1rem; color:var(--ink-soft); font-size:0.85rem; }
   .clear-filter { color:var(--navy); cursor:pointer; font-weight:500; text-decoration:underline; }
@@ -88,7 +105,7 @@
   .card { background:var(--panel); border:1px solid var(--rule); border-left:4px solid var(--slate); border-radius:3px; padding:0.95rem 1.1rem; margin-bottom:0.7rem; }
   .card.is-le { border-left-color:var(--brass); }
   .le-badge { display:inline-block; font-style:italic; font-weight:600; font-size:0.72rem; padding:0.1rem 0.55rem; border-radius:3px; margin-bottom:0.5rem; }
-  .le-badge.yes { background:var(--brass-soft); color:#7A5A17; }
+  .le-badge.yes { background:var(--brass-soft); color:#0F4A9E; }
   .le-badge.no { background:var(--slate-soft); color:var(--ink-soft); }
   .parties { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.12rem; margin-bottom:0.25rem; }
   .decision-date { font-size:0.78rem; color:var(--ink-soft); margin-bottom:0.6rem; }
@@ -106,13 +123,9 @@
 </head>
 <body>
 <div id="loginScreen">
-  <svg id="shieldWatermark" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M100 6 L145 20 L162 30 L160 92 C158 145 132 180 100 213 C68 180 42 145 40 92 L38 30 L55 20 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M100 6 L145 20 L162 30 L160 92 C158 145 132 180 100 213" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
-    <polygon points="100,58 110,88 142,88 116,107 126,138 100,119 74,138 84,107 58,88 90,88" fill="currentColor"/>
-  </svg>
+  <img id="loginBanner" src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C.">
   <div class="login-card">
-    <h1>Member Login TEST</h1>
+    <h1>Case Archive</h1>
     <p>Sign in to search the case archive. Access is by invitation only.</p>
     <input id="email" type="email" placeholder="Email" autocomplete="username">
     <input id="password" type="password" placeholder="Password" autocomplete="current-password">
@@ -134,7 +147,7 @@
   <header class="hero">
     <div class="hero-inner">
       <div class="hero-top">
-        <h1>Member Login TEST</h1>
+        <div><img class="brand-banner" src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C."><h1>Case Archive</h1></div>
         <div class="hero-top-right">
           <span id="welcomeMsg"></span>
           <button id="signOutBtn">Sign Out</button>
@@ -181,7 +194,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-13-year-folder-note-v12</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-16-resilient-brand-v13</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
