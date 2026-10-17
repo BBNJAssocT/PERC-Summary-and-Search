@@ -1,6 +1,6 @@
 {
-  "name": "Resilient Case Archive",
-  "short_name": "Resilient",
+  "name": "NJ PERC Search",
+  "short_name": "NJ PERC",
   "description": "Search the case archive and download summaries with links to each decision.",
   "start_url": "./",
   "scope": "./",

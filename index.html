@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Resilient | Case Archive</title>
+<title>NJ PERC Search</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <meta name="theme-color" content="#00142B">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Resilient">
+<meta name="apple-mobile-web-app-title" content="NJ PERC Search">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -23,8 +23,10 @@
   body { font-family:'IBM Plex Sans',-apple-system,Segoe UI,Arial,sans-serif; margin:0; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
   .mono { font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace; }
   #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; position:relative; overflow:hidden; background:var(--night); flex-direction:column; gap:1.25rem; }
-  #loginBanner { width:min(520px,92vw); height:auto; border-radius:6px; position:relative; z-index:2; display:block; }
-  .brand-banner { width:min(420px,100%); height:auto; display:block; border-radius:5px; margin:0 0 0.9rem; }
+  .powered-by { display:flex; flex-direction:column; align-items:flex-start; gap:0.35rem; margin-top:0.7rem; }
+  .powered-by .pb-label { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:#8FA3C2; }
+  .powered-by img { width:min(280px,70vw); height:auto; display:block; border-radius:4px; }
+  .powered-by.center { align-items:center; position:relative; z-index:2; margin-top:0; }
   #setPasswordScreen { background:var(--night); }
   header.hero { background:var(--night) !important; border-bottom:3px solid var(--brass) !important; }
   .hero h1 { color:#fff !important; }
@@ -123,15 +125,15 @@
 </head>
 <body>
 <div id="loginScreen">
-  <img id="loginBanner" src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C.">
   <div class="login-card">
-    <h1>Case Archive</h1>
+    <h1>NJ PERC Search</h1>
     <p>Sign in to search the case archive. Access is by invitation only.</p>
     <input id="email" type="email" placeholder="Email" autocomplete="username">
     <input id="password" type="password" placeholder="Password" autocomplete="current-password">
     <button id="loginBtn">Sign In</button>
     <div id="loginError"></div>
   </div>
+  <div class="powered-by center"><span class="pb-label">Powered by</span><img src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C."></div>
 </div>
 <div id="setPasswordScreen" style="display:none;">
   <div class="login-card">
@@ -147,7 +149,7 @@
   <header class="hero">
     <div class="hero-inner">
       <div class="hero-top">
-        <div><img class="brand-banner" src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C."><h1>Case Archive</h1></div>
+        <div><h1>NJ PERC Search</h1><div class="powered-by"><span class="pb-label">Powered by</span><img src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C."></div></div>
         <div class="hero-top-right">
           <span id="welcomeMsg"></span>
           <button id="signOutBtn">Sign Out</button>
@@ -194,7 +196,7 @@
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-16-resilient-brand-v13</div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-17-njperc-title-poweredby-v14</div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
