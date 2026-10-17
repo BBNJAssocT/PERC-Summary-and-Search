@@ -7,6 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta name="build" content="2026-10-17-admin-autoupdate-v17">
 <meta name="theme-color" content="#00142B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NJ PERC Search">
@@ -30,6 +31,33 @@
   #getAppBtn { background:transparent; color:#fff; border:1.5px solid var(--chrome); font-family:inherit; font-size:0.9rem; font-weight:600; padding:0.6rem 1.1rem; border-radius:6px; cursor:pointer; }
   #getAppBtn:hover { background:rgba(255,255,255,0.08); }
   #getAppHelp { margin-top:0.7rem; font-size:0.82rem; line-height:1.5; color:#AEB9CC; }
+  #adminBtn { background:transparent; color:#fff; border:1.5px solid var(--chrome); font-family:inherit; font-size:0.82rem; font-weight:600; padding:0.35rem 0.8rem; border-radius:5px; cursor:pointer; }
+  #adminBadge { display:inline-block; min-width:1.2rem; padding:0 0.35rem; margin-left:0.35rem; border-radius:999px; background:#F5B301; color:#1a1300; font-size:0.72rem; font-weight:700; text-align:center; }
+  #updateBanner { position:fixed; left:0; right:0; bottom:0; z-index:200; background:var(--brass); color:#fff; text-align:center; font-size:0.9rem; font-weight:600; padding:0.7rem 1rem; }
+  #conflictBanner { background:#FFF4D6; border-bottom:1px solid #E5A100; color:#5C4300; text-align:center; font-size:0.88rem; font-weight:600; padding:0.55rem 1rem; cursor:pointer; }
+  #adminPanel { max-width:820px; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
+  #adminPanel h2 { font-family:'Spectral',Georgia,serif; font-weight:600; color:var(--navy); margin:0; font-size:1.5rem; }
+  .admin-top { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; }
+  .admin-top button, .admin-card button, .conflict button { font-family:inherit; font-size:0.85rem; font-weight:600; border-radius:5px; cursor:pointer; padding:0.45rem 0.9rem; border:1.5px solid var(--rule); background:var(--panel); color:var(--navy); }
+  .admin-card { background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:1rem 1.1rem; margin-bottom:1rem; }
+  .admin-card h3 { font-family:'Spectral',Georgia,serif; font-weight:600; font-size:1.1rem; color:var(--navy); margin:0 0 0.5rem; }
+  .admin-card .help { font-size:0.84rem; color:var(--ink-soft); margin:0 0 0.8rem; line-height:1.45; }
+  .admin-form { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
+  .admin-form input { width:100%; padding:0.65rem 0.8rem; border:1.5px solid var(--rule); border-radius:5px; font-family:inherit; font-size:0.92rem; background:var(--paper); }
+  .admin-form input.wide, .admin-form button.wide { grid-column:1 / -1; }
+  .admin-card button.primary, .conflict button.primary { background:var(--brass); color:#fff; border-color:var(--brass); }
+  .admin-card button.danger, .conflict button.danger { color:#a33; border-color:#e3b5b5; }
+  #adminMsg { margin-top:0.7rem; font-size:0.86rem; }
+  .conflict { background:#FFF4D6; border:1px solid #E5A100; border-radius:6px; padding:0.9rem 1rem; margin-bottom:0.8rem; font-size:0.9rem; color:#3d2e00; line-height:1.5; }
+  .conflict .actions { margin-top:0.6rem; display:flex; gap:0.5rem; flex-wrap:wrap; }
+  .member-row { display:flex; justify-content:space-between; align-items:center; gap:0.75rem; padding:0.6rem 0; border-bottom:1px solid var(--rule); font-size:0.9rem; }
+  .member-row:last-child { border-bottom:none; }
+  .member-row .who { min-width:0; overflow-wrap:anywhere; }
+  .member-row .dept { font-weight:600; color:var(--navy); }
+  .member-row .sub { font-size:0.78rem; color:var(--ink-soft); }
+  .tag { display:inline-block; font-size:0.68rem; font-weight:700; padding:0.05rem 0.45rem; border-radius:3px; margin-left:0.4rem; background:var(--slate-soft); color:var(--ink-soft); }
+  .tag.admin { background:var(--brass-soft); color:#0F4A9E; }
+  @media (max-width:560px) { .admin-form { grid-template-columns:1fr; } }
   .powered-by.center { align-items:center; position:relative; z-index:2; margin-top:0; }
   #setPasswordScreen { background:var(--night); }
   header.hero { background:var(--night) !important; border-bottom:3px solid var(--brass) !important; }
@@ -40,7 +68,7 @@
   .hero p.tagline { color:#AEB9CC !important; }
   .hero p.tagline strong { color:#fff; }
   .login-card { border-top-color:var(--brass); }
-  @media (max-width:560px) { .hero h1 { font-size:1.4rem; } #downloadWordBtn, #uploadBtn, #downloadSummaryBtn, #installBtn { margin-left:0 !important; } .hero-inner button { display:block; width:100%; margin-top:0.5rem; } #downloadWordBtn[hidden], #uploadBtn[hidden], #installBtn[hidden] { display:none !important; } }
+  @media (max-width:560px) { .hero h1 { font-size:1.4rem; } #downloadWordBtn, #uploadBtn, #downloadSummaryBtn, #installBtn { margin-left:0 !important; } .hero-inner > button { display:block; width:100%; margin-top:0.5rem; } #downloadWordBtn[hidden], #uploadBtn[hidden], #installBtn[hidden] { display:none !important; } }
   #setPasswordScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
   .login-card { background:var(--panel); border:1px solid var(--rule); border-top:4px solid var(--brass); border-radius:6px; padding:2rem; max-width:380px; width:100%; position:relative; z-index:2; box-shadow:0 8px 30px rgba(11,37,69,0.15); }
   .login-card h1 { font-family:'Spectral',Georgia,serif; font-weight:600; color:var(--navy); margin:0 0 0.3rem; font-size:1.6rem; }
@@ -162,6 +190,7 @@
         <div><h1>NJ PERC Search</h1><div class="powered-by"><span class="pb-label">Powered by</span><img src="assets/resilient-banner.jpg" alt="Resilient Accountability &amp; Compliance Systems L.L.C."></div></div>
         <div class="hero-top-right">
           <span id="welcomeMsg"></span>
+          <button id="adminBtn" type="button" hidden>Admin<span id="adminBadge" hidden></span></button>
           <button id="signOutBtn">Sign Out</button>
         </div>
       </div>
@@ -169,18 +198,38 @@
       <button id="downloadSummaryBtn">Download Full Summary (PDF)</button>
       <button id="downloadWordBtn" type="button" hidden>Download Full Summary (Word)</button>
       <button id="installBtn" type="button" hidden>Install App</button>
-      <button id="uploadBtn" type="button" hidden>Add PDFs</button>
       <div id="iosHint" hidden>To install on iPhone or iPad: tap Share, then &ldquo;Add to Home Screen&rdquo;.</div>
-      <div id="uploadPanel" hidden>
-        <div class="up-title">Add new decisions</div>
+      
+    </div>
+  </header>
+  <div id="conflictBanner" hidden></div>
+  <section id="adminPanel" hidden>
+    <div class="admin-top"><h2>Administration</h2><button id="adminBackBtn" type="button">&larr; Back to search</button></div>
+    <div id="conflictList"></div>
+    <div class="admin-card">
+      <h3>Add a chief</h3>
+      <p class="help">Each department can have one chief. Enter the chief&rsquo;s details and an invitation email is sent. If someone from that department is already listed, nothing is sent and you are asked to verify it below.</p>
+      <form id="inviteForm" class="admin-form" autocomplete="off">
+        <input id="invName" type="text" placeholder="Chief&rsquo;s full name" required>
+        <input id="invEmail" type="email" placeholder="Email" required>
+        <input id="invDept" class="wide" type="text" placeholder="Department (for example, Newark Police Department)" required>
+        <button id="invSubmit" class="primary wide" type="submit">Send invitation</button>
+      </form>
+      <div id="adminMsg"></div>
+    </div>
+    <div class="admin-card">
+      <h3>Members</h3>
+      <div id="memberList"><div class="loading-state">Loading...</div></div>
+    </div>
+    <div id="uploadPanel" class="admin-card">
+        <h3>Add PDFs</h3>
         <p class="up-help">Choose PDF files or drop them here. They go to a private waiting folder. At the next processing run each one is summarized, filed in its year folder (taken from the year in the file name, like PERC 2026 12.pdf), and added to the archive with its links.</p>
         <div id="dropZone" tabindex="0" role="button">Tap to choose PDFs, or drop them here</div>
         <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
         <ul id="uploadList"></ul>
         <div id="waitingSummary"></div>
       </div>
-    </div>
-  </header>
+  </section>
   <div id="searchBar">
     <div class="search-bar-inner">
       <div class="search-row">
@@ -204,17 +253,18 @@
       </div>
     </div>
   </div>
-  <div class="hero-inner" style="padding:0 1.25rem;">
+  <div id="browseArea" class="hero-inner" style="padding:0 1.25rem;">
     <div class="chip-row" id="categoryChips"></div>
     <div class="chip-row" id="yearChips"></div>
     <div class="disclosure">This archive was generated with AI assistance (Anthropic Claude) for reference and internal case-tracking purposes only. Summaries, factors, and categorizations are AI-generated and may contain errors or omissions. Always review the linked source PDF and verify accuracy before relying on any summary, citing it, or taking action based on it.</div>
-    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;">Build: 2026-10-17-get-app-login-v16</div>
+    <div id="buildMarker" style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--rule); margin-top:0.5rem;"></div>
   </div>
   <main>
     <div class="status-bar" id="statusBar"></div>
     <div id="results"><div class="loading-state">Loading...</div></div>
   </main>
 </div>
+<div id="updateBanner" hidden>A new version is available. Updating&hellip;</div>
 <script>
 const SUPABASE_URL = "https://dhsjjsauzixhwxsctjnn.supabase.co";
 const ANON_KEY = "sb_publishable_6vcYKIkOjegQsq9DqWisAg_VyFV8wY4";
@@ -708,8 +758,9 @@ function tokenRole(token) {
 }
 function updateAdminUi() {
   const isAdmin = Boolean(accessToken) && tokenRole(accessToken) === 'admin';
-  document.getElementById('uploadBtn').hidden = !isAdmin;
-  if (!isAdmin) document.getElementById('uploadPanel').hidden = true;
+  document.getElementById('adminBtn').hidden = !isAdmin;
+  if (!isAdmin) { showAdmin(false); document.getElementById('conflictBanner').hidden = true; }
+  else loadAdminData();
 }
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 // Same rule the processing run uses to pick the year folder: the first 4-digit year in the
@@ -754,9 +805,11 @@ async function uploadOne(file, statusEl) {
     return false;
   }
 }
+let uploadsInFlight = false;
 async function uploadFiles(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
+  uploadsInFlight = true;
   const list = document.getElementById('uploadList');
   list.innerHTML = '';
   const rows = files.map(f => {
@@ -766,7 +819,8 @@ async function uploadFiles(fileList) {
     li.appendChild(n); li.appendChild(s); list.appendChild(li);
     return s;
   });
-  for (let i = 0; i < files.length; i++) { await uploadOne(files[i], rows[i]); }
+  try { for (let i = 0; i < files.length; i++) { await uploadOne(files[i], rows[i]); } }
+  finally { uploadsInFlight = false; }
   await refreshWaiting();
 }
 async function refreshWaiting() {
@@ -784,10 +838,104 @@ async function refreshWaiting() {
       : items.length + (items.length === 1 ? ' file is' : ' files are') + ' waiting to be processed.';
   } catch (e) { el.textContent = ''; }
 }
-document.getElementById('uploadBtn').onclick = () => {
-  const panel = document.getElementById('uploadPanel');
-  panel.hidden = !panel.hidden;
-  if (!panel.hidden) refreshWaiting();
+// ---- Admin section: members, one chief per department, conflict notices, Add PDFs ----
+// Display gate only. Every action runs in the admin-users function, which re-checks the
+// admin role on the server, and the upload rules are enforced by the storage policy.
+const ADMIN_API = SUPABASE_URL + '/functions/v1/admin-users';
+async function adminCall(action, payload) {
+  const resp = await fetch(ADMIN_API, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...(payload || {}) }),
+  });
+  let data = {}; try { data = await resp.json(); } catch (e) {}
+  if (!resp.ok && !data.error) data.error = 'Something went wrong. Please try again.';
+  return data;
+}
+function showAdmin(on) {
+  document.getElementById('adminPanel').hidden = !on;
+  ['searchBar', 'browseArea'].forEach(id => { document.getElementById(id).hidden = on; });
+  document.querySelector('main').hidden = on;
+  if (on) { loadAdminData(); refreshWaiting(); window.scrollTo(0, 0); }
+}
+function fmtDate(iso) { try { return new Date(iso).toLocaleDateString(); } catch (e) { return ''; } }
+function renderConflicts(conflicts) {
+  const list = document.getElementById('conflictList');
+  const badge = document.getElementById('adminBadge');
+  const banner = document.getElementById('conflictBanner');
+  badge.hidden = conflicts.length === 0; badge.textContent = conflicts.length;
+  if (conflicts.length === 0) { banner.hidden = true; list.innerHTML = ''; return; }
+  banner.hidden = false;
+  banner.textContent = conflicts.length === 1
+    ? '1 department already has a chief. Tap to verify.'
+    : conflicts.length + ' departments already have a chief. Tap to verify.';
+  list.innerHTML = conflicts.map(c => (
+    '<div class="conflict" data-id="' + escapeHtml(c.id) + '">' +
+    '<strong>Verify: ' + escapeHtml(c.department) + ' already has a chief.</strong><br>' +
+    'Current: ' + escapeHtml(c.existing_name || '(no name)') + ' (' + escapeHtml(c.existing_email || '') + ')<br>' +
+    'Someone tried to add: ' + escapeHtml(c.full_name || '(no name)') + ' (' + escapeHtml(c.email) + ') on ' + escapeHtml(fmtDate(c.created_at)) + '.<br>' +
+    'If the new person is the correct chief, replace the old one. This removes the old account and sends the invitation to the new person.' +
+    '<div class="actions"><button type="button" class="primary" data-act="replace">Replace old chief</button>' +
+    '<button type="button" data-act="dismiss">Keep current chief</button></div></div>'
+  )).join('');
+}
+function renderMembers(users) {
+  const el = document.getElementById('memberList');
+  if (!users.length) { el.innerHTML = '<div class="empty-state">No members yet.</div>'; return; }
+  users.sort((a, b) => (b.is_admin - a.is_admin) || String(a.department || '').localeCompare(String(b.department || '')));
+  el.innerHTML = users.map(u => (
+    '<div class="member-row" data-id="' + escapeHtml(u.id) + '"><div class="who">' +
+    '<span class="dept">' + escapeHtml(u.department || (u.is_admin ? 'Administrator' : 'No department')) + '</span>' +
+    (u.is_admin ? '<span class="tag admin">Admin</span>' : '') +
+    (!u.accepted ? '<span class="tag">Invited</span>' : '') +
+    (!u.has_profile && !u.is_admin ? '<span class="tag">Not set up here</span>' : '') +
+    '<div class="sub">' + escapeHtml(u.full_name || '') + (u.full_name ? ' &middot; ' : '') + escapeHtml(u.email || '') + '</div></div>' +
+    (u.is_admin ? '' : '<button type="button" class="danger" data-act="remove">Remove</button>') + '</div>'
+  )).join('');
+}
+async function loadAdminData() {
+  if (!accessToken || tokenRole(accessToken) !== 'admin') return;
+  const data = await adminCall('list');
+  if (data.error) { document.getElementById('memberList').innerHTML = '<div class="empty-state">' + escapeHtml(data.error) + '</div>'; return; }
+  renderConflicts(data.conflicts || []);
+  renderMembers(data.users || []);
+}
+function adminMsg(text, ok) {
+  const m = document.getElementById('adminMsg'); m.textContent = text; m.style.color = ok ? '#2c6e3f' : '#a33';
+}
+document.getElementById('adminBtn').onclick = () => showAdmin(true);
+document.getElementById('adminBackBtn').onclick = () => showAdmin(false);
+document.getElementById('conflictBanner').onclick = () => showAdmin(true);
+document.getElementById('inviteForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('invSubmit'); btn.disabled = true; adminMsg('Sending...', true);
+  const data = await adminCall('invite', {
+    full_name: document.getElementById('invName').value,
+    email: document.getElementById('invEmail').value,
+    department: document.getElementById('invDept').value,
+  });
+  btn.disabled = false;
+  if (data.invited) { adminMsg('Invitation sent.', true); e.target.reset(); }
+  else if (data.conflict) { adminMsg('Not sent. ' + data.existing.department + ' already has a chief (' + (data.existing.name || data.existing.email) + '). See the notice above to verify.', false); e.target.reset(); }
+  else { adminMsg(data.error || 'Could not send the invitation.', false); }
+  await loadAdminData();
+};
+document.getElementById('conflictList').onclick = async (e) => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.closest('.conflict').dataset.id;
+  if (b.dataset.act === 'replace' && !confirm('Remove the current chief and send the invitation to the new person?')) return;
+  b.disabled = true;
+  const data = await adminCall('resolve', { conflict_id: id, resolution: b.dataset.act === 'replace' ? 'replace' : 'dismiss' });
+  if (data.error) alert(data.error);
+  await loadAdminData();
+};
+document.getElementById('memberList').onclick = async (e) => {
+  const b = e.target.closest('button[data-act="remove"]'); if (!b) return;
+  if (!confirm('Remove this member? They will no longer be able to sign in.')) return;
+  b.disabled = true;
+  const data = await adminCall('remove_user', { user_id: b.closest('.member-row').dataset.id });
+  if (data.error) alert(data.error);
+  await loadAdminData();
 };
 const dropZoneEl = document.getElementById('dropZone');
 const fileInputEl = document.getElementById('fileInput');
@@ -800,6 +948,31 @@ dropZoneEl.ondrop = (e) => { e.preventDefault(); dropZoneEl.classList.remove('ov
 document.getElementById("downloadSummaryBtn").onclick = () => openPdf("_Case_Summaries.pdf");
 document.getElementById("downloadWordBtn").onclick = () => openPdf("_Case_Summaries.docx");
 checkInviteOrRecoveryLink();
+
+// ---- Auto-update ----
+// Each deploy changes the build id (also in a <meta name="build"> tag). The page re-checks
+// on open, when it comes back to the foreground and every 10 minutes. If a newer build is
+// live it reloads itself, unless an invite link or an upload is in progress.
+const BUILD_ID = "2026-10-17-admin-autoupdate-v17";
+document.getElementById("buildMarker").textContent = "Build: " + BUILD_ID;
+let updating = false;
+async function checkForUpdate() {
+  if (updating || !/^https?:$/.test(location.protocol)) return;
+  if (/access_token|type=(invite|recovery)/.test(location.hash) || uploadsInFlight) return;
+  try {
+    const r = await fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/<meta name="build" content="([^"]+)"/);
+    if (m && m[1] !== BUILD_ID) {
+      updating = true;
+      document.getElementById("updateBanner").hidden = false;
+      setTimeout(() => { location.replace(location.pathname + "?v=" + encodeURIComponent(m[1])); }, 1500);
+    }
+  } catch (e) {}
+}
+setTimeout(checkForUpdate, 3000);
+setInterval(checkForUpdate, 10 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(); });
 
 // Install-as-app support: a "Get the Mobile App" button on the login page (for everyone)
 // and an "Install App" button after sign-in. Uses the browser's install prompt when available,
